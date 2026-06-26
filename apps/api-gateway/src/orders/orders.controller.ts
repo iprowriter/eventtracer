@@ -18,7 +18,7 @@ export class OrdersController {
   createOrder(
     @Body() dto: CreateOrderDto,
     @Headers('idempotency-key') idempotencyKey?: string,
-  ): { orderId: string } {
+  ): Promise<{ orderId: string }> {
     return this.ordersService.createOrder(dto, idempotencyKey);
   }
 }
