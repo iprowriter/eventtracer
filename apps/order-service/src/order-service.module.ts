@@ -4,6 +4,7 @@ import { OrderServiceController } from './order-service.controller';
 import { Order } from './orders/order.entity';
 import { OrdersService } from './orders/orders.service';
 import { SnakeNamingStrategy } from './snake-naming.strategy';
+import { OutboxMessage } from '@app/outbox';
 
 @Module({
   imports: [
@@ -16,10 +17,10 @@ import { SnakeNamingStrategy } from './snake-naming.strategy';
       database: process.env.POSTGRES_DB ?? 'eventtracer',
       schema: 'order_service', // ADR-008: this service owns ONLY this schema
       namingStrategy: new SnakeNamingStrategy(), // camelCase props → snake_case columns
-      entities: [Order],
+      entities: [Order, OutboxMessage],
       synchronize: true, // DEV ONLY: auto-creates tables from entities
     }),
-    TypeOrmModule.forFeature([Order]), // exposes Repository<Order> for injection
+    TypeOrmModule.forFeature([Order, OutboxMessage]), // exposes Repository<Order> for injection
   ],
   controllers: [OrderServiceController],
   providers: [OrdersService],
