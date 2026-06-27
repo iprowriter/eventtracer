@@ -83,6 +83,7 @@
     ],
     "moduleNameMapper": {
       "^@app/events(|/.*)$": "<rootDir>/libs/events/src/$1",
+      "^@app/kafka(|/.*)$": "<rootDir>/libs/kafka/src/$1",
       "^@app/outbox(|/.*)$": "<rootDir>/libs/outbox/src/$1",
       "^@app/persistence(|/.*)$": "<rootDir>/libs/persistence/src/$1"
     }

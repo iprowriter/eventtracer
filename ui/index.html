@@ -15,6 +15,8 @@
                color: #94a3b8; font-family: monospace; }
     .event { padding: 10px 12px; border-bottom: 1px solid #334155; }
     .event:last-child { border-bottom: none; }
+    .event.dlq { background: #3b1418; }
+    .event.dlq .type { color: #fca5a5; }
     .type { font-weight: 600; color: #38bdf8; }
     .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
     pre { margin: 6px 0 0; font-size: 11px; color: #cbd5e1; white-space: pre-wrap; }
@@ -101,6 +103,8 @@
 
       const ev = document.createElement('div');
       ev.className = 'event';
+      // Dead-letter events (eventType ends in .DLQ) get the red treatment.
+      if (envelope.eventType.endsWith('.DLQ')) ev.classList.add('dlq');
       ev.innerHTML =
         '<div class="type">' + envelope.eventType + '</div>' +
         '<div class="meta">' + new Date(envelope.occurredAt).toLocaleTimeString() +

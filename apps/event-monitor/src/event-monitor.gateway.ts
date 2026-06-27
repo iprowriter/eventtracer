@@ -5,7 +5,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { EventEnvelope } from '@app/events';
+import { type DeadLetter, EventEnvelope, dlq } from '@app/events';
 import type { ConsumerStatus } from './consumer-lag.service';
 
 @WebSocketGateway({
@@ -39,5 +39,29 @@ export class EventMonitorGateway implements OnGatewayConnection {
    */
   broadcastStatus(statuses: ConsumerStatus[]) {
     this.server.emit('status', statuses);
+  }
+
+  /**
+   * Reshape a dead letter into an envelope-like card and push it on the SAME
+   * 'event' channel, so it lands in its run's saga column flagged as a `.DLQ`
+   * event (the UI styles it red). eventType is the DLQ topic name (a plain
+   * string, not a Topics value) — that's why we build the object here rather
+   * than pass an EventEnvelope.
+   */
+  broadcastDeadLetter(deadLetter: DeadLetter) {
+    const { original } = deadLetter;
+    this.server.emit('event', {
+      eventId: original.eventId,
+      eventType: dlq(deadLetter.originalTopic),
+      occurredAt: deadLetter.failedAt,
+      correlationId: original.correlationId,
+      version: original.version,
+      payload: {
+        error: deadLetter.error,
+        attempts: deadLetter.attempts,
+        originalTopic: deadLetter.originalTopic,
+        originalPayload: original.payload,
+      },
+    });
   }
 }

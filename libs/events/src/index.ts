@@ -1,5 +1,6 @@
 export * from './envelope';
 export * from './topics';
+export * from './dead-letter';
 export * from './commands';
 export * from './order-events';
 export * from './payment-events';

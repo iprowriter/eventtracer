@@ -21,6 +21,15 @@ export class PaymentsService {
   constructor(private readonly dataSource: DataSource) {}
 
   async handleOrderCreated(order: OrderCreatedPayload): Promise<void> {
+    // DLQ demo (ADR-007): an item with sku 'POISON' simulates an order this
+    // service can NEVER process (a permanent error). It throws on EVERY attempt,
+    // so the controller's retry-then-DLQ wrapper routes it to order.created.DLQ
+    // after N tries instead of blocking the partition forever. Thrown BEFORE the
+    // transaction opens, so failed attempts leave no partial state.
+    if (order.items.some((item) => item.sku === 'POISON')) {
+      throw new Error(`Unprocessable order ${order.orderId}: POISON sku`);
+    }
+
     await this.dataSource.transaction(async (manager) => {
       const payments = manager.getRepository(Payment);
       const outbox = manager.getRepository(OutboxMessage);

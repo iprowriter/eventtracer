@@ -180,7 +180,7 @@ Two-column layout (Next.js + TypeScript).
 | **Delayed order** | Injected processing latency; consumer lag rises then drains. |
 | **Kill shipping consumer** | Events buffer in the partition while the consumer is down; on restart it catches up and lag returns to 0 — the clearest "this isn't a REST call" moment. |
 | **Duplicate delivery** | Re-deliver `order.created`; idempotency key prevents a second charge. |
-| **Poison message → DLQ** | A malformed event is retried N times then routed to the DLQ. |
+| **Poison message → DLQ** | POST an order with an item of sku `POISON`; payment-service can never process it, so after 3 retries the `order.created` is routed to `order.created.DLQ` and shows as a red card in the UI. |
 | **Replay** | Reset a consumer offset and replay the log from the beginning. |
 
 ---

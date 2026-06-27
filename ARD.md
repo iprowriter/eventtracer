@@ -140,11 +140,22 @@ failure scenario demonstrates this directly.
 **Context.** Some messages can never be processed (malformed payload, permanent error).
 Retrying them forever blocks the partition.
 
-**Decision.** After N retries, a consumer routes the failing message to a `<topic>.DLQ`
-topic with failure metadata, then commits and moves on.
+**Decision.** After N retries (default 3), a consumer routes the failing message to a
+`<topic>.DLQ` topic carrying the original envelope + failure metadata (`DeadLetter`), then
+returns so the offset commits and the partition keeps moving. Implemented as a reusable
+`processWithDlq` wrapper in `libs/kafka`; the Event Monitor consumes the DLQ topics and
+renders dead letters as red cards in the run's column.
+
+**Carve-out from ADR-004 / rule #4.** The DLQ produce is a **direct** publish, NOT
+outbox-backed. The outbox exists to publish a domain event atomically with the state change
+that caused it; a dead-letter has *no* state change to be atomic with (processing failed,
+nothing was written), and a dropped DLQ produce simply means the message is redelivered and
+retried again — acceptable. So rule #4 ("every producer publishes via the outbox") governs
+DOMAIN event publishing only; operational dead-lettering is exempt by this ADR.
 
 **Consequences.** The pipeline stays healthy under bad input; failures are inspectable.
-Drives the "poison message → DLQ" demo scenario.
+Drives the "poison message → DLQ" demo scenario (trigger: an order item with sku `POISON`,
+which payment-service can never process).
 
 ---
 

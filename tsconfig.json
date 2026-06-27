@@ -32,6 +32,12 @@
       "@app/events/*": [
         "libs/events/src/*"
       ],
+      "@app/kafka": [
+        "libs/kafka/src"
+      ],
+      "@app/kafka/*": [
+        "libs/kafka/src/*"
+      ],
       "@app/outbox": [
         "libs/outbox/src"
       ],
