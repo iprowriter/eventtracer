@@ -17,6 +17,15 @@
     .event:last-child { border-bottom: none; }
     .event.dlq { background: #3b1418; }
     .event.dlq .type { color: #fca5a5; }
+    .event.replayed { opacity: 0.75; }
+    .event.replayed .type::after { content: ' ↻ replay'; font-size: 10px; font-weight: 600;
+                                   color: #a78bfa; }
+    header button { font-size: 12px; font-family: inherit; cursor: pointer; color: #e2e8f0;
+                    background: #334155; border: 1px solid #475569; border-radius: 6px;
+                    padding: 4px 10px; }
+    header button:hover { background: #475569; }
+    header button:disabled { opacity: 0.5; cursor: default; }
+    .spacer { flex: 1; }
     .type { font-weight: 600; color: #38bdf8; }
     .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
     pre { margin: 6px 0 0; font-size: 11px; color: #cbd5e1; white-space: pre-wrap; }
@@ -37,6 +46,9 @@
   <header>
     <h1>EventTracer — live event stream</h1>
     <span id="status">connecting…</span>
+    <span class="spacer"></span>
+    <button id="replay" title="Re-read every topic from offset 0 and rebuild the timeline from the log">↻ Replay log</button>
+    <button id="clear" title="Clear the board">Clear</button>
   </header>
   <div id="services"></div>
   <div id="sagas"><div class="empty">Waiting for events… POST an order to the gateway.</div></div>
@@ -105,6 +117,8 @@
       ev.className = 'event';
       // Dead-letter events (eventType ends in .DLQ) get the red treatment.
       if (envelope.eventType.endsWith('.DLQ')) ev.classList.add('dlq');
+      // Events re-pushed by the replay endpoint are dimmed and badged.
+      if (envelope.replayed) ev.classList.add('replayed');
       ev.innerHTML =
         '<div class="type">' + envelope.eventType + '</div>' +
         '<div class="meta">' + new Date(envelope.occurredAt).toLocaleTimeString() +
@@ -112,6 +126,32 @@
         '<pre>' + JSON.stringify(envelope.payload, null, 2) + '</pre>';
       col.appendChild(ev);
     });
+
+    // Wipe the board back to its empty state (does not touch Kafka or the log).
+    function clearBoard() {
+      columns.clear();
+      sagas.innerHTML = '<div class="empty">Waiting for events… POST an order to the gateway.</div>';
+    }
+    document.getElementById('clear').onclick = clearBoard;
+
+    // Replay = POST to the monitor's replay endpoint (NOT to Kafka — the browser
+    // never publishes, rule #1). We clear first so the timeline visibly rebuilds
+    // purely from the Kafka log: the log is the source of truth, the UI a projection.
+    const replayBtn = document.getElementById('replay');
+    replayBtn.onclick = async () => {
+      replayBtn.disabled = true;
+      replayBtn.textContent = '↻ Replaying…';
+      clearBoard();
+      try {
+        const res = await fetch('http://localhost:4000/replay', { method: 'POST' });
+        if (!res.ok) throw new Error('replay failed: ' + res.status);
+      } catch (err) {
+        alert(String(err));
+      } finally {
+        replayBtn.disabled = false;
+        replayBtn.textContent = '↻ Replay log';
+      }
+    };
   </script>
 </body>
 </html>

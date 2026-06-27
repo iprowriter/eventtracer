@@ -254,6 +254,36 @@ shows up as a card under its order's `correlationId`.
 
 ---
 
+## ADR-012 — Event replay is read-only and reconstructs the UI from the log
+
+**Status:** Accepted.
+
+**Context.** Kafka retains the log, so the timeline a viewer sees should be reconstructable
+from the topics alone — not dependent on having watched the browser live. specs §4.7 / §6
+call for a "Replay events" action. The risk: a naïve replay could re-trigger the saga
+(double charges, duplicate shipments) or let the browser reach into Kafka, both of which
+break earlier decisions.
+
+**Decision.** The **Event Monitor** exposes `POST /replay` (optional `?topic=`; omitted =
+all domain topics). For each topic it snapshots the high-water mark, then drains from offset
+0 with a **throwaway consumer group** (random id, `fromBeginning`) and re-pushes each
+historical envelope over the existing WebSocket, tagged `replayed: true`. It stops the
+instant every partition reaches the watermark. It **never produces to Kafka**.
+
+**Consequences.**
+- Replay is pure observability (ADR-002): a fresh group commits no offsets and disturbs no
+  real consumer; no produce means no domain service is re-triggered. Idempotency (ADR-006)
+  is not even exercised by replay — nothing in the domain re-consumes.
+- The browser POSTs to the **monitor**, not the gateway. This does **not** weaken ADR-001:
+  rule #1 is "the browser never *publishes to Kafka*," and replay is a read-only admin call;
+  the monitor only consumes. Domain *intent* still goes only to the gateway.
+- The log is shown to be the source of truth and the UI a projection of it: clearing the
+  board and replaying rebuilds the same timeline from the topics alone.
+- DLQ topics carry a `DeadLetter` wrapper, not an `EventEnvelope`, so replay is restricted
+  to the known domain topics (unknown/`.DLQ` topic → 400).
+
+---
+
 ## Decision summary
 
 | ADR | Decision | One-line why |
@@ -269,3 +299,4 @@ shows up as a card under its order's `correlationId`.
 | 009 | NestJS monorepo | Shared contracts, independent services |
 | 010 | Docker Compose | One-command startup |
 | 011 | Notification publishes `notification.sent` | Make the notify step visible in the UI |
+| 012 | Read-only replay from the log | Rebuild the timeline without re-triggering the saga |

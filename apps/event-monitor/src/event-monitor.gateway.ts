@@ -32,6 +32,16 @@ export class EventMonitorGateway implements OnGatewayConnection {
   }
 
   /**
+   * Re-push a historical envelope during a replay. Same 'event' channel so it
+   * lands in its saga column, but flagged `replayed: true` so the UI can mark it
+   * and a replay doesn't masquerade as fresh live traffic. Still the ONE place
+   * anything reaches the UI (rule #3 / ADR-002).
+   */
+  broadcastReplay(envelope: EventEnvelope) {
+    this.server.emit('event', { ...envelope, replayed: true });
+  }
+
+  /**
    * Push the latest consumer-health snapshot to every browser. Separate channel
    * ('status') from the event stream so the UI can render the service bar
    * without it getting tangled in the saga timeline. Still the ONE place
