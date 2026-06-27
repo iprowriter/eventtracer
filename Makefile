@@ -1,7 +1,7 @@
 # Define the default target when running just 'make'
 .DEFAULT_GOAL := help
 
-.PHONY: dev build build-ok start test lint order-service-dev event-monitor-service-dev clean help
+.PHONY: dev build build-ok start test lint order-service-dev event-monitor-service-dev payment-service-dev clean help
 
 dev:
 	npm run start:dev
@@ -11,6 +11,9 @@ order-service-dev:
 
 event-monitor-service-dev:
 	npm run start:dev -- event-monitor
+
+payment-service-dev:
+	npm run start:dev -- payment-service
 
 build:
 	npm run build
@@ -41,3 +44,4 @@ help:
 	@echo "  make clean  - Delete build artifacts and local dependency modules"
 	@echo "  make order-service-dev  - Starts orderService and watch for changes"
 	@echo "  event-monitor-service-dev  - Starts Event Monitor service and watch for changes"
+	@echo "  payment-service-dev  - Starts Payment service and watch for changes"

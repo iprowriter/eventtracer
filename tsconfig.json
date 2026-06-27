@@ -37,6 +37,12 @@
       ],
       "@app/outbox/*": [
         "libs/outbox/src/*"
+      ],
+      "@app/persistence": [
+        "libs/persistence/src"
+      ],
+      "@app/persistence/*": [
+        "libs/persistence/src/*"
       ]
     }
   }

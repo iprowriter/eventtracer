@@ -4,9 +4,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OUTBOX_PRODUCER, OutboxMessage, OutboxRelay } from '@app/outbox';
 import { SnakeNamingStrategy } from '@app/persistence';
-import { OrderServiceController } from './order-service.controller';
-import { Order } from './orders/order.entity';
-import { OrdersService } from './orders/orders.service';
+import { PaymentServiceController } from './payment-service.controller';
+import { Payment } from './payments/payment.entity';
+import { PaymentsService } from './payments/payments.service';
 
 @Module({
   imports: [
@@ -18,29 +18,28 @@ import { OrdersService } from './orders/orders.service';
       username: process.env.POSTGRES_USER ?? 'eventtracer',
       password: process.env.POSTGRES_PASSWORD ?? 'eventtracer',
       database: process.env.POSTGRES_DB ?? 'eventtracer',
-      schema: 'order_service', // ADR-008: this service owns ONLY this schema
+      schema: 'payment_service', // ADR-008: this service owns ONLY this schema
       namingStrategy: new SnakeNamingStrategy(),
-      entities: [Order, OutboxMessage],
+      entities: [Payment, OutboxMessage],
       synchronize: true, // DEV ONLY
     }),
-    TypeOrmModule.forFeature([Order, OutboxMessage]),
-    // The OUTBOUND Kafka producer the relay publishes through. Registered under
-    // the OUTBOX_PRODUCER token so OutboxRelay (in libs/outbox) can inject it.
-    // This is separate from the inbound microservice server in main.ts.
+    TypeOrmModule.forFeature([Payment, OutboxMessage]),
+    // The OUTBOUND Kafka producer the relay publishes through (separate from the
+    // inbound microservice server in main.ts), injected via the OUTBOX_PRODUCER token.
     ClientsModule.register([
       {
         name: OUTBOX_PRODUCER,
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: 'order-service-producer',
+            clientId: 'payment-service-producer',
             brokers: [process.env.KAFKA_BROKER ?? 'localhost:9092'],
           },
         },
       },
     ]),
   ],
-  controllers: [OrderServiceController],
-  providers: [OrdersService, OutboxRelay],
+  controllers: [PaymentServiceController],
+  providers: [PaymentsService, OutboxRelay],
 })
-export class OrderServiceModule {}
+export class PaymentServiceModule {}
