@@ -19,6 +19,15 @@
         "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
       }
     },
+    "event-monitor": {
+      "type": "application",
+      "root": "apps/event-monitor",
+      "entryFile": "main",
+      "sourceRoot": "apps/event-monitor/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/event-monitor/tsconfig.app.json"
+      }
+    },
     "events": {
       "type": "library",
       "root": "libs/events",
