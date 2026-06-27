@@ -100,7 +100,7 @@ consumer group and (logically) its own Postgres schema.
 
 ### 4.5 Notification Service
 - Consumes all customer-relevant events (`order.created`, `payment.succeeded`,
-  `payment.failed`, `shipment.created`).
+  `payment.failed`, `shipment.created`, `refund.initiated`).
 - Simulates email/SMS ("order confirmed", "payment failed", "shipped").
 - Publishes `notification.sent` (one per notification, via its outbox) **purely so the
   visualization shows the customer was notified** — see ADR-011. It is *not* a domain

@@ -31,4 +31,9 @@ export class NotificationServiceController {
   handleShipmentCreated(@Payload() envelope: EventEnvelope) {
     return this.notificationsService.notify(envelope);
   }
+
+  @EventPattern(Topics.RefundInitiated)
+  handleRefundInitiated(@Payload() envelope: EventEnvelope) {
+    return this.notificationsService.notify(envelope);
+  }
 }

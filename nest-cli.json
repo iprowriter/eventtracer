@@ -82,6 +82,15 @@
         "tsConfigPath": "libs/persistence/tsconfig.lib.json"
       }
     },
+    "refund-service": {
+      "type": "application",
+      "root": "apps/refund-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/refund-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/refund-service/tsconfig.app.json"
+      }
+    },
     "shipping-service": {
       "type": "application",
       "root": "apps/shipping-service",

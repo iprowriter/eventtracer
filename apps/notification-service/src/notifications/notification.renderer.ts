@@ -2,6 +2,7 @@ import {
   EventEnvelope,
   PaymentFailedPayload,
   PaymentSucceededPayload,
+  RefundInitiatedPayload,
   ShipmentCreatedPayload,
   Topics,
 } from '@app/events';
@@ -49,6 +50,13 @@ export function renderNotification(
       return {
         channel: 'SMS',
         message: `Your order ${orderId} has shipped via ${carrier}.`,
+      };
+    }
+    case Topics.RefundInitiated: {
+      const { amount } = envelope.payload as RefundInitiatedPayload;
+      return {
+        channel: 'EMAIL',
+        message: `A refund of $${amount} has been initiated for order ${orderId}.`,
       };
     }
     default: {
