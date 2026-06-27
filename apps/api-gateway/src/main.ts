@@ -5,6 +5,10 @@ import { ApiGatewayModule } from './api-gateway.module';
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
 
+  // dev: the throwaway ui/index.html (loaded from file://) now POSTs scenario
+  // actions like "redeliver" straight to the gateway, so it needs CORS.
+  app.enableCors();
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // strip properties not declared on the DTO

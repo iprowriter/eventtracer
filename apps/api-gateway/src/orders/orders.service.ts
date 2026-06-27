@@ -2,7 +2,11 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { randomUUID } from 'node:crypto';
 import { firstValueFrom } from 'rxjs';
-import { Commands, CreateOrderCommand } from '@app/events';
+import {
+  Commands,
+  CreateOrderCommand,
+  RedeliverOrderCommand,
+} from '@app/events';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
@@ -40,6 +44,22 @@ export class OrdersService implements OnModuleInit {
     this.logger.log(
       `Forwarded ${Commands.CreateOrder} for order ${orderId} ` +
         `(items=${dto.items.length}, amount=${dto.amount})`,
+    );
+    return { orderId };
+  }
+
+  /**
+   * Ask the order-service to re-publish an existing order's `order.created` (the
+   * idempotency demo, specs §7). Like createOrder this is a fire-and-forget Kafka
+   * command — the gateway never republishes the domain event itself (rules #1, #4).
+   */
+  async redeliverOrder(orderId: string): Promise<{ orderId: string }> {
+    const command: RedeliverOrderCommand = { orderId };
+    await firstValueFrom(
+      this.orderClient.emit(Commands.RedeliverOrder, command),
+    );
+    this.logger.log(
+      `Forwarded ${Commands.RedeliverOrder} for order ${orderId}`,
     );
     return { orderId };
   }

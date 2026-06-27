@@ -284,6 +284,39 @@ instant every partition reaches the watermark. It **never produces to Kafka**.
 
 ---
 
+## ADR-013 — Demonstrate idempotency by re-emitting the identical event from its owner
+
+**Status:** Accepted (realizes ADR-006 as a runnable demo).
+
+**Context.** specs §7 calls for a "duplicate delivery" scenario: re-deliver `order.created` and
+show no second charge. The consumers are already idempotent (ADR-006), but we need a way to
+*trigger* a redelivery on demand. Several options: (a) reset payment-service's consumer-group
+offset and restart — operational, can't run while the group is live, and re-delivers to only
+one consumer; (b) let the browser or Event Monitor re-publish the event — breaks rules #1/#4
+(only an owning domain service may publish a domain event, via its outbox); (c) re-emit the
+event from the service that owns it.
+
+**Decision.** Option (c). `POST /orders/:id/redeliver` on the gateway emits an
+`order.redeliver` **command** (rule #1: intent enters via the gateway, never the browser
+touching Kafka). The **Order Service** — the owner of `order.created` — handles it by reading
+the order's original outbox row and queuing a **new outbox row carrying the identical
+envelope** (same `eventId`). The relay republishes it verbatim (rule #4), so the broker
+effectively redelivers the same message.
+
+**Consequences.**
+- It's a *true* at-least-once redelivery: same `eventId`, so both dedupe strategies fire —
+  Payment dedupes on `orderId` (no second charge / no second `payment.succeeded`), Notification
+  on the consumed `eventId` (no second email). Shipping/Refund are never reached because no new
+  `payment.*` is produced.
+- The proof is visible: the order's column gains a second `order.created` card while every
+  downstream count holds steady. Reusing the *same* `eventId` is essential — a fresh id would
+  make Notification treat it as new and re-send.
+- Redelivery deliberately bypasses `createOrder`'s order-exists guard (we *want* to re-emit);
+  it only re-queues the event, never a second order row.
+- No new infra and no offset surgery: the demo is repeatable from the UI per order.
+
+---
+
 ## Decision summary
 
 | ADR | Decision | One-line why |
@@ -300,3 +333,4 @@ instant every partition reaches the watermark. It **never produces to Kafka**.
 | 010 | Docker Compose | One-command startup |
 | 011 | Notification publishes `notification.sent` | Make the notify step visible in the UI |
 | 012 | Read-only replay from the log | Rebuild the timeline without re-triggering the saga |
+| 013 | Redeliver the identical event from its owner | Prove idempotency: no second charge on redelivery |

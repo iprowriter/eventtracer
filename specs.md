@@ -80,6 +80,8 @@ consumer group and (logically) its own Postgres schema.
 - Exposes the public REST surface; the only inbound HTTP entry point.
 - `POST /orders` — accept order command, forward to Order Service, return `202 Accepted`
   with `{ orderId }`. Honors an `Idempotency-Key` header.
+- `POST /orders/:id/redeliver` — ask the Order Service to re-publish an order's original
+  `order.created` (the duplicate-delivery / idempotency demo, §7). `202 Accepted`.
 - `GET /orders/:id` — current order status (read model).
 - Hosts (or proxies) the WebSocket endpoint used by the UI.
 
@@ -87,6 +89,9 @@ consumer group and (logically) its own Postgres schema.
 - Consumes the create-order command (via gateway).
 - Persists the order **and** an `OrderCreated` event into the outbox in one transaction.
 - Outbox relay publishes `order.created`.
+- Consumes an `order.redeliver` command (via gateway) and re-queues the order's **original**
+  `order.created` envelope (same `eventId`) to the outbox — a true at-least-once redelivery
+  for the idempotency demo (§7). It owns `order.created`, so re-emitting it belongs here.
 
 ### 4.3 Payment Service
 - Consumes `order.created`.
@@ -179,7 +184,7 @@ Two-column layout (Next.js + TypeScript).
 | **Failed payment** | `payment.failed` → Refund consumes → compensation saga → notification. |
 | **Delayed order** | Injected processing latency; consumer lag rises then drains. |
 | **Kill shipping consumer** | Events buffer in the partition while the consumer is down; on restart it catches up and lag returns to 0 — the clearest "this isn't a REST call" moment. |
-| **Duplicate delivery** | Re-deliver `order.created`; idempotency key prevents a second charge. |
+| **Duplicate delivery** | `POST /orders/:id/redeliver` → the Order Service re-queues the order's *original* `order.created` (same `eventId`). Payment dedupes on `orderId`, Notification on the consumed `eventId` — so the column gains a 2nd `order.created` card but no second `payment.succeeded`/`shipment.created`/`notification.sent`. No second charge (ADR-013). |
 | **Poison message → DLQ** | POST an order with an item of sku `POISON`; payment-service can never process it, so after 3 retries the `order.created` is routed to `order.created.DLQ` and shows as a red card in the UI. |
 | **Replay** | The Event Monitor re-reads each topic from offset 0 with a throwaway consumer group and re-streams the history to the UI (`POST /replay`), rebuilding the timeline from the log alone. Read-only — it never produces, so the saga is not re-triggered (ADR-012). |
 

@@ -71,4 +71,46 @@ export class OrdersService {
       );
     });
   }
+
+  /**
+   * Re-publish an order's original `order.created` — the duplicate-delivery /
+   * idempotency demo (specs §7, rule #5). We read the row we first wrote to the
+   * outbox and queue a NEW outbox row carrying the SAME envelope (same eventId).
+   * The relay republishes it verbatim, so the consumers see a genuine
+   * at-least-once redelivery: payment dedupes on orderId, notification on the
+   * consumed eventId — both no-op, so no second charge and no second email.
+   *
+   * order.created is OWNED by this service, so re-emitting it here (via the
+   * outbox, rule #4) is the only correct place — the gateway/browser must not
+   * republish a domain event themselves (rules #1, #4).
+   */
+  async redeliver(orderId: string): Promise<void> {
+    const outbox = this.dataSource.getRepository(OutboxMessage);
+
+    // The first order.created we ever emitted for this order.
+    const original = await outbox.findOne({
+      where: { topic: Topics.OrderCreated, key: orderId },
+      order: { createdAt: 'ASC' },
+    });
+    if (!original) {
+      this.logger.warn(
+        `Cannot redeliver ${Topics.OrderCreated} for ${orderId} — no original outbox row found`,
+      );
+      return;
+    }
+
+    // A fresh outbox row (own id, publishedAt NULL) with the IDENTICAL payload.
+    await outbox.save(
+      outbox.create({
+        topic: original.topic,
+        key: original.key,
+        payload: original.payload, // same envelope → same eventId
+      }),
+    );
+
+    const envelope = original.payload as EventEnvelope<OrderCreatedPayload>;
+    this.logger.log(
+      `Re-queued ${Topics.OrderCreated} for ${orderId} (same eventId=${envelope.eventId}) — consumers should dedupe it`,
+    );
+  }
 }

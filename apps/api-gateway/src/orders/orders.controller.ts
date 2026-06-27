@@ -4,6 +4,7 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
 } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -20,5 +21,13 @@ export class OrdersController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<{ orderId: string }> {
     return this.ordersService.createOrder(dto, idempotencyKey);
+  }
+
+  // Idempotency demo (specs §7): re-deliver an existing order's order.created.
+  // Still a command to the gateway (rule #1) — the browser never touches Kafka.
+  @Post(':id/redeliver')
+  @HttpCode(HttpStatus.ACCEPTED)
+  redeliverOrder(@Param('id') id: string): Promise<{ orderId: string }> {
+    return this.ordersService.redeliverOrder(id);
   }
 }

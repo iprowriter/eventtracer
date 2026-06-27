@@ -23,6 +23,7 @@ describe('OrdersService — duplicate delivery', () => {
   let outbox: {
     create: jest.Mock;
     save: jest.Mock<Promise<OutboxMessage>, [OutboxMessage]>;
+    findOne: jest.Mock;
   };
 
   const command: CreateOrderCommand = {
@@ -40,6 +41,7 @@ describe('OrdersService — duplicate delivery', () => {
     outbox = {
       create: jest.fn((x: OutboxMessage) => x),
       save: jest.fn<Promise<OutboxMessage>, [OutboxMessage]>(),
+      findOne: jest.fn(),
     };
 
     // Fake manager: hands back our mock repos based on the entity requested.
@@ -50,10 +52,12 @@ describe('OrdersService — duplicate delivery', () => {
     } as unknown as EntityManager;
 
     // dataSource.transaction(cb) just runs cb with the fake manager.
+    // redeliver() reads the outbox directly via getRepository (no transaction).
     const dataSource = {
       transaction: jest.fn((cb: (m: EntityManager) => Promise<unknown>) =>
         cb(manager),
       ),
+      getRepository: jest.fn(() => outbox),
     } as unknown as DataSource;
 
     const moduleRef = await Test.createTestingModule({
@@ -85,5 +89,42 @@ describe('OrdersService — duplicate delivery', () => {
 
     expect(orders.save).not.toHaveBeenCalled();
     expect(outbox.save).not.toHaveBeenCalled();
+  });
+
+  describe('redeliver — re-publishes the IDENTICAL order.created', () => {
+    it('queues a new outbox row carrying the original envelope (same eventId)', async () => {
+      const originalEnvelope = {
+        eventId: 'evt-original',
+        eventType: Topics.OrderCreated,
+        occurredAt: '2026-06-27T00:00:00.000Z',
+        correlationId: command.orderId,
+        version: 1,
+        payload: { orderId: command.orderId },
+      };
+      outbox.findOne.mockResolvedValue({
+        topic: Topics.OrderCreated,
+        key: command.orderId,
+        payload: originalEnvelope,
+      });
+
+      await service.redeliver(command.orderId);
+
+      expect(outbox.save).toHaveBeenCalledTimes(1);
+      const requeued = outbox.save.mock.calls[0][0];
+      expect(requeued.topic).toBe(Topics.OrderCreated);
+      expect(requeued.key).toBe(command.orderId);
+      // Same envelope => same eventId: a true at-least-once redelivery, which
+      // every consumer must dedupe to a no-op (rule #5).
+      expect(requeued.payload).toBe(originalEnvelope);
+      expect(requeued.payload.eventId).toBe('evt-original');
+    });
+
+    it('does nothing when the order has no original order.created', async () => {
+      outbox.findOne.mockResolvedValue(null);
+
+      await service.redeliver('unknown-order');
+
+      expect(outbox.save).not.toHaveBeenCalled();
+    });
   });
 });

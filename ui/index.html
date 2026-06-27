@@ -9,10 +9,19 @@
     h1 { font-size: 16px; margin: 0; }
     #status { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #475569; }
     #status.on { background: #16a34a; }
-    #sagas { display: flex; gap: 16px; padding: 20px; overflow-x: auto; align-items: flex-start; }
-    .saga { background: #1e293b; border: 1px solid #334155; border-radius: 10px; min-width: 300px; }
+    #sagas { display: flex; flex-wrap: wrap; gap: 16px; padding: 20px; align-items: flex-start; }
+    .saga { background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+            width: 320px; align-self: stretch; }
     .saga h2 { font-size: 12px; margin: 0; padding: 10px 12px; border-bottom: 1px solid #334155;
-               color: #94a3b8; font-family: monospace; }
+               color: #94a3b8; font-family: monospace; display: flex; justify-content: space-between;
+               gap: 8px; }
+    .saga h2 .hdr-right { display: flex; align-items: center; gap: 8px; }
+    .saga h2 .count { color: #64748b; font-weight: 600; }
+    .saga h2 .redeliver { font-size: 11px; line-height: 1; cursor: pointer; color: #e2e8f0;
+                          background: #334155; border: 1px solid #475569; border-radius: 5px;
+                          padding: 3px 6px; }
+    .saga h2 .redeliver:hover { background: #475569; }
+    .saga h2 .redeliver:disabled { opacity: 0.5; cursor: default; }
     .event { padding: 10px 12px; border-bottom: 1px solid #334155; }
     .event:last-child { border-bottom: none; }
     .event.dlq { background: #3b1418; }
@@ -105,7 +114,18 @@
         const card = document.createElement('div');
         card.className = 'saga';
         const title = document.createElement('h2');
-        title.textContent = envelope.correlationId;
+        // correlationId on the left; on the right a live event-count badge (so
+        // full sagas stand out from order-only columns) + a re-deliver button
+        // (the idempotency demo — re-publishes this order's order.created).
+        title.innerHTML =
+          '<span class="cid"></span><span class="hdr-right">' +
+          '<span class="count">0</span>' +
+          '<button class="redeliver" title="Re-deliver order.created — proves consumers dedupe (no second charge)">⟳ redeliver</button>' +
+          '</span>';
+        const cid = envelope.correlationId;
+        title.querySelector('.cid').textContent = cid;
+        const btn = title.querySelector('.redeliver');
+        btn.onclick = () => redeliver(cid, btn);
         card.appendChild(title);
         col = document.createElement('div');
         card.appendChild(col);
@@ -125,7 +145,26 @@
         ' · eventId ' + envelope.eventId.slice(0, 8) + '</div>' +
         '<pre>' + JSON.stringify(envelope.payload, null, 2) + '</pre>';
       col.appendChild(ev);
+      // refresh the column's event-count badge
+      col.previousElementSibling.querySelector('.count').textContent = col.children.length;
     });
+
+    // Idempotency demo: ask the GATEWAY (not Kafka — rule #1) to re-publish this
+    // order's order.created. Watch the column gain a 2nd order.created card while
+    // payment.succeeded / shipment.created / notification.sent counts hold steady
+    // — the consumers dedupe the redelivery to a no-op.
+    async function redeliver(orderId, btn) {
+      btn.disabled = true;
+      try {
+        const res = await fetch('http://localhost:5000/orders/' + orderId + '/redeliver',
+          { method: 'POST' });
+        if (!res.ok) throw new Error('redeliver failed: ' + res.status);
+      } catch (err) {
+        alert(String(err));
+      } finally {
+        setTimeout(() => { btn.disabled = false; }, 800);
+      }
+    }
 
     // Wipe the board back to its empty state (does not touch Kafka or the log).
     function clearBoard() {

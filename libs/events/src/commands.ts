@@ -10,6 +10,7 @@
  */
 export const Commands = {
   CreateOrder: 'order.create',
+  RedeliverOrder: 'order.redeliver',
 } as const;
 
 /** A valid command name, e.g. 'order.create'. */
@@ -23,4 +24,14 @@ export interface CreateOrderCommand {
   amount: number;
   /** Optional client-supplied key for end-to-end idempotency. */
   idempotencyKey?: string;
+}
+
+/**
+ * Re-publish an existing order's `order.created` (the duplicate-delivery /
+ * idempotency demo, specs §7). The order-service re-emits the IDENTICAL envelope
+ * (same eventId), so every consumer dedupes it to a no-op — no second charge,
+ * no second notification.
+ */
+export interface RedeliverOrderCommand {
+  orderId: string;
 }
