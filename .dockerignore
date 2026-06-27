@@ -1,0 +1,15 @@
+# Keep the build context small and reproducible — the image installs deps and
+# compiles from source itself.
+node_modules
+dist
+coverage
+.git
+.gitignore
+npm-debug.log*
+.DS_Store
+.env
+.vscode
+.idea
+# Throwaway demo UI and (future) Next.js frontend are not part of the backend images.
+ui
+frontend

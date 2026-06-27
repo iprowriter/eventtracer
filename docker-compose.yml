@@ -1,3 +1,33 @@
+# --- Shared config for the seven NestJS apps -------------------------------
+# They all run the SAME image (built once from ./Dockerfile) and differ only by
+# the `command:` that picks which bundle to run. The apps live behind the `apps`
+# compose profile, so `docker compose up` still starts ONLY infra (kafka+pg) for
+# the usual dev workflow (apps via `npm run start:dev -- <app>`), while
+# `docker compose --profile apps up` brings up the whole system. See the Makefile.
+x-app-env: &app-env
+  # In-network addresses: apps reach Kafka on its INTERNAL listener and Postgres
+  # by service name. (On the host, the same code defaults to localhost:9092.)
+  KAFKA_BROKER: kafka:19092
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: eventtracer
+  POSTGRES_PASSWORD: eventtracer
+  POSTGRES_DB: eventtracer
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: eventtracer-app:local # shared tag → image is built once, reused by all
+  profiles: ["apps"]
+  restart: unless-stopped
+  depends_on:
+    kafka:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+  environment: *app-env
+
 services:
   kafka:
     image: apache/kafka:3.9.0
@@ -50,6 +80,53 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # --- Application services (profile: apps) --------------------------------
+  # The two HTTP apps publish ports; the five pure-Kafka services don't.
+  api-gateway:
+    <<: *app
+    container_name: eventtracer-api-gateway
+    command: node dist/apps/api-gateway/main
+    environment:
+      <<: *app-env
+      PORT: 5000
+    ports:
+      - "5000:5000" # public REST surface (POST /orders, /orders/:id/redeliver)
+
+  event-monitor:
+    <<: *app
+    container_name: eventtracer-event-monitor
+    command: node dist/apps/event-monitor/main
+    environment:
+      <<: *app-env
+      PORT: 4000
+    ports:
+      - "4000:4000" # WebSocket + replay endpoint the UI connects to
+
+  order-service:
+    <<: *app
+    container_name: eventtracer-order-service
+    command: node dist/apps/order-service/main
+
+  payment-service:
+    <<: *app
+    container_name: eventtracer-payment-service
+    command: node dist/apps/payment-service/main
+
+  shipping-service:
+    <<: *app
+    container_name: eventtracer-shipping-service
+    command: node dist/apps/shipping-service/main
+
+  notification-service:
+    <<: *app
+    container_name: eventtracer-notification-service
+    command: node dist/apps/notification-service/main
+
+  refund-service:
+    <<: *app
+    container_name: eventtracer-refund-service
+    command: node dist/apps/refund-service/main
 
 volumes:
   kafka-data:
