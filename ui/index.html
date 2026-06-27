@@ -19,6 +19,16 @@
     .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
     pre { margin: 6px 0 0; font-size: 11px; color: #cbd5e1; white-space: pre-wrap; }
     .empty { padding: 40px; color: #64748b; }
+    #services { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 20px;
+                background: #16203a; border-bottom: 1px solid #334155; }
+    .svc { display: flex; align-items: center; gap: 6px; font-size: 12px; font-family: monospace;
+           background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 4px 10px; }
+    .svc .dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; }
+    .svc.up .dot { background: #16a34a; }
+    .svc.down .dot { background: #dc2626; }
+    .svc.down .name { color: #fca5a5; }
+    .svc .lag { color: #64748b; }
+    .svc.lagging .lag { color: #f59e0b; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -26,13 +36,16 @@
     <h1>EventTracer — live event stream</h1>
     <span id="status">connecting…</span>
   </header>
+  <div id="services"></div>
   <div id="sagas"><div class="empty">Waiting for events… POST an order to the gateway.</div></div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const sagas = document.getElementById('sagas');
     const statusEl = document.getElementById('status');
+    const servicesEl = document.getElementById('services');
     const columns = new Map(); // correlationId -> events container
+    const svcEls = new Map();  // service name -> chip element
 
     const socket = io('http://localhost:4000');
 
@@ -43,6 +56,28 @@
     socket.on('disconnect', () => {
       statusEl.textContent = 'disconnected';
       statusEl.classList.remove('on');
+    });
+
+    // The monitor emits 'status' every ~2s with each service's consumer health.
+    // Kill a service and watch its dot go red and its lag climb; restart it and
+    // the lag drains back to 0.
+    socket.on('status', (list) => {
+      for (const s of list) {
+        let el = svcEls.get(s.service);
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'svc';
+          el.innerHTML =
+            '<span class="dot"></span><span class="name"></span><span class="lag"></span>';
+          servicesEl.appendChild(el);
+          svcEls.set(s.service, el);
+        }
+        el.classList.toggle('up', s.status === 'up');
+        el.classList.toggle('down', s.status === 'down');
+        el.classList.toggle('lagging', s.lag > 0);
+        el.querySelector('.name').textContent = s.service;
+        el.querySelector('.lag').textContent = 'lag ' + s.lag;
+      }
     });
 
     // The monitor emits 'event' with the full envelope. Group by correlationId

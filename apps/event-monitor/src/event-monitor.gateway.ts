@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { EventEnvelope } from '@app/events';
+import type { ConsumerStatus } from './consumer-lag.service';
 
 @WebSocketGateway({
   // dev only — the browser page connects from another origin. socket.io has its
@@ -28,5 +29,15 @@ export class EventMonitorGateway implements OnGatewayConnection {
    */
   broadcast(envelope: EventEnvelope) {
     this.server.emit('event', envelope);
+  }
+
+  /**
+   * Push the latest consumer-health snapshot to every browser. Separate channel
+   * ('status') from the event stream so the UI can render the service bar
+   * without it getting tangled in the saga timeline. Still the ONE place
+   * anything reaches the UI (rule #3 / ADR-002).
+   */
+  broadcastStatus(statuses: ConsumerStatus[]) {
+    this.server.emit('status', statuses);
   }
 }
