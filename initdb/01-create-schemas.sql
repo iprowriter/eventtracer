@@ -7,3 +7,4 @@
 CREATE SCHEMA IF NOT EXISTS order_service;
 CREATE SCHEMA IF NOT EXISTS payment_service;
 CREATE SCHEMA IF NOT EXISTS shipping_service;
+CREATE SCHEMA IF NOT EXISTS notification_service;

@@ -99,8 +99,12 @@ consumer group and (logically) its own Postgres schema.
 - Creates a shipment, publishes `shipment.created`.
 
 ### 4.5 Notification Service
-- Consumes all relevant events (terminal sink — publishes nothing).
+- Consumes all customer-relevant events (`order.created`, `payment.succeeded`,
+  `payment.failed`, `shipment.created`).
 - Simulates email/SMS ("order confirmed", "payment failed", "shipped").
+- Publishes `notification.sent` (one per notification, via its outbox) **purely so the
+  visualization shows the customer was notified** — see ADR-011. It is *not* a domain
+  input: nothing consumes `notification.sent` except the Event Monitor.
 
 ### 4.6 Refund Service
 - Consumes `payment.failed`.
@@ -124,6 +128,7 @@ consumer group and (logically) its own Postgres schema.
 | `payment.failed` | Payment | Refund, Notification, Monitor | `{ orderId, reason }` |
 | `shipment.created` | Shipping | Notification, Monitor | `{ orderId, shipmentId, carrier }` |
 | `refund.initiated` | Refund | Notification, Monitor | `{ orderId, refundId, amount }` |
+| `notification.sent` | Notification | Monitor | `{ orderId, notificationId, channel, message, triggeredBy }` |
 | `<topic>.DLQ` | any consumer | Monitor | original message + failure metadata |
 
 **Envelope** (every event shares this shape):

@@ -37,6 +37,15 @@
         "tsConfigPath": "libs/events/tsconfig.lib.json"
       }
     },
+    "notification-service": {
+      "type": "application",
+      "root": "apps/notification-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/notification-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notification-service/tsconfig.app.json"
+      }
+    },
     "order-service": {
       "type": "application",
       "root": "apps/order-service",

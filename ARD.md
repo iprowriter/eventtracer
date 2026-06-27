@@ -216,6 +216,33 @@ architecture itself.
 
 ---
 
+## ADR-011 — Notification service publishes `notification.sent` (for visibility)
+
+**Status:** Accepted (supersedes the original "terminal sink — publishes nothing" note in
+specs §4.5).
+
+**Context.** The notification service was specified as a pure sink: it consumes events and
+"sends" email/SMS but produces nothing. Because the Event Monitor can only surface what is
+on a Kafka topic (ADR-002), a pure sink is **invisible in the UI** — yet notifying the
+customer is a real, demo-worthy step of the saga. Someone watching only the browser would
+never know it happened.
+
+**Decision.** Notification publishes a `notification.sent` event (one per notification it
+sends) through the **same transactional outbox** every other producer uses (ADR-004). The
+Event Monitor subscribes to it and broadcasts it like any other event, so each notification
+shows up as a card under its order's `correlationId`.
+
+**Consequences.**
+- The browser now shows the notification step; the saga is fully observable end-to-end.
+- Notification is no longer a "pure sink" example — it regains the outbox + relay machinery.
+- `notification.sent` is **observability-only**: nothing in the domain consumes it (only the
+  Monitor), so it does not create new choreography or risk a feedback loop. Notification does
+  not subscribe to its own topic.
+- Idempotency is unchanged: dedupe is on the *consumed* event's `eventId`; the emitted
+  `notification.sent` carries its own fresh id, so there is no key collision.
+
+---
+
 ## Decision summary
 
 | ADR | Decision | One-line why |
@@ -230,3 +257,4 @@ architecture itself.
 | 008 | Postgres schema-per-service | Data ownership, one container |
 | 009 | NestJS monorepo | Shared contracts, independent services |
 | 010 | Docker Compose | One-command startup |
+| 011 | Notification publishes `notification.sent` | Make the notify step visible in the UI |

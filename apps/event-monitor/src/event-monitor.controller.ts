@@ -33,6 +33,11 @@ export class EventMonitorController {
     this.broadcast(envelope);
   }
 
+  @EventPattern(Topics.NotificationSent)
+  handleNotificationSent(@Payload() envelope: EventEnvelope) {
+    this.broadcast(envelope);
+  }
+
   private broadcast(envelope: EventEnvelope) {
     this.logger.log(
       `[${envelope.eventType}] correlationId=${envelope.correlationId} eventId=${envelope.eventId}`,
