@@ -22,7 +22,8 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "types": [
-      "node"
+      "node",
+      "jest"
     ],
     "paths": {
       "@app/events": [

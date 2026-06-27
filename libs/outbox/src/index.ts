@@ -1,3 +1,3 @@
-export * from './outbox.module';
-export * from './outbox.service';
 export * from './outbox-message.entity';
+export * from './outbox.constants';
+export * from './outbox-relay.service';
