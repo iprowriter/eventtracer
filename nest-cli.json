@@ -72,6 +72,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/persistence/tsconfig.lib.json"
       }
+    },
+    "shipping-service": {
+      "type": "application",
+      "root": "apps/shipping-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/shipping-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/shipping-service/tsconfig.app.json"
+      }
     }
   }
 }

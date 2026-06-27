@@ -1,7 +1,7 @@
 # Define the default target when running just 'make'
 .DEFAULT_GOAL := help
 
-.PHONY: dev build build-ok start test lint order-service-dev event-monitor-service-dev payment-service-dev clean help
+.PHONY: dev build build-ok start test lint order-service-dev event-monitor-service-dev payment-service-dev shipping-service-dev clean help
 
 dev:
 	npm run start:dev
@@ -14,6 +14,9 @@ event-monitor-service-dev:
 
 payment-service-dev:
 	npm run start:dev -- payment-service
+
+shipping-service-dev:
+	npm run start:dev -- shipping-service
 
 build:
 	npm run build
@@ -45,3 +48,4 @@ help:
 	@echo "  make order-service-dev  - Starts orderService and watch for changes"
 	@echo "  event-monitor-service-dev  - Starts Event Monitor service and watch for changes"
 	@echo "  payment-service-dev  - Starts Payment service and watch for changes"
+	@echo "  shipping-service-dev  - Starts Shipping service and watch for changes"
