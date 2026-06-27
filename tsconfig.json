@@ -30,6 +30,12 @@
       ],
       "@app/events/*": [
         "libs/events/src/*"
+      ],
+      "@app/outbox": [
+        "libs/outbox/src"
+      ],
+      "@app/outbox/*": [
+        "libs/outbox/src/*"
       ]
     }
   }

@@ -1,16 +1,19 @@
 # Define the default target when running just 'make'
 .DEFAULT_GOAL := help
 
-.PHONY: dev build start test lint clean help
+.PHONY: dev build build-ok start test lint order-service-dev clean help
 
 dev:
 	npm run start:dev
 
 order-service-dev:
-    npx nest start order-service --watch
+	npx nest start order-service --watch
 
 build:
 	npm run build
+
+build-ok:
+	npm run build && echo "BUILD OK"
 
 start:
 	npm run start:prod
@@ -28,6 +31,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make dev    - Start NestJS application in development hot-reload mode"
 	@echo "  make build  - Compile TypeScript code into JavaScript production assets"
+	@echo "  make build-ok  - Compile TypeScript code into JavaScript production assets and publishes BUILD OK"
 	@echo "  make start  - Run the compiled production application code"
 	@echo "  make test   - Run unit test suites via Jest framework"
 	@echo "  make lint   - Analyze and fix code formatting and linting errors"

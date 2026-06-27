@@ -79,7 +79,8 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/events(|/.*)$": "<rootDir>/libs/events/src/$1"
+      "^@app/events(|/.*)$": "<rootDir>/libs/events/src/$1",
+      "^@app/outbox(|/.*)$": "<rootDir>/libs/outbox/src/$1"
     }
   }
 }
