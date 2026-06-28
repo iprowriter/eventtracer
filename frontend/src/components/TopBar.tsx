@@ -75,6 +75,7 @@ export function TopBar({
           <Trash2 size={16} />
           clear
         </button>
+        <HowItWorks />
         <span className="ml-2 flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs">
           <span
             className={`size-2.5 rounded-full ${connected ? "animate-pulse" : ""}`}
@@ -87,7 +88,6 @@ export function TopBar({
           />
           websocket · {connected ? "live" : "offline"}
         </span>
-        <HowItWorks />
       </div>
     </header>
   );

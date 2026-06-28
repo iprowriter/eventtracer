@@ -72,7 +72,7 @@ export function HowItWorks() {
           aria-label="How EventTracer works"
         >
           <div
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
+            className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -106,8 +106,13 @@ export function HowItWorks() {
                   playsInline
                   controls
                   onError={() => setVideoError(true)}
-                  className="mb-5 w-full rounded-lg border border-border"
+                  className="mb-2 max-h-[65vh] w-full rounded-lg border border-border bg-black object-contain"
                 />
+              )}
+              {!videoError && (
+                <p className="mb-5 text-center text-xs text-muted">
+                  Text small? Use the video&apos;s ⛶ fullscreen control.
+                </p>
               )}
 
               <div className="grid gap-4 sm:grid-cols-2">
