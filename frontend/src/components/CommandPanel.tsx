@@ -32,27 +32,40 @@ export function CommandPanel({
   onRun: (body: PlaceOrderBody, label: string) => void;
   busy: boolean;
 }) {
-  // The current (editable) order values. Scenario buttons build on these, so the
-  // user can see the values are real — not hardcoded — and tweak or regenerate.
-  const [base, setBase] = useState<PlaceOrderBody>(() => sampleOrder());
+  // The editable order values are held as STRINGS while typing so the fields can
+  // be cleared (an empty box stays empty instead of snapping back to 0/1). They're
+  // parsed into numbers only when an order is actually placed.
+  const [form, setForm] = useState(() => toForm(sampleOrder()));
   const [editing, setEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
   // The last-run scenario stays highlighted (white) until another takes over.
   const [active, setActive] = useState<string | null>(null);
 
-  const item = base.items[0];
+  function setField(key: keyof typeof form, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
 
   function generate() {
     setGenerating(true);
     // Brief delay so the "generating…" state is visible (it's a real action).
     setTimeout(() => {
-      setBase(sampleOrder());
+      setForm(toForm(sampleOrder()));
       setGenerating(false);
     }, 550);
   }
 
   function run(scenario: Scenario) {
     setActive(scenario.id);
+    // Coerce the strings to a valid order at submit time (empty → sensible default).
+    const base: PlaceOrderBody = {
+      items: [
+        {
+          sku: form.sku.trim() || "ITEM-1",
+          quantity: Math.max(1, parseInt(form.qty, 10) || 1),
+        },
+      ],
+      amount: parseFloat(form.amount) || 0,
+    };
     onRun(bodyForScenario(scenario, base), scenario.label);
   }
 
@@ -96,10 +109,8 @@ export function CommandPanel({
         <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2 p-3">
           <Field label="sku">
             <input
-              value={item.sku}
-              onChange={(e) =>
-                setBase({ items: [{ ...item, sku: e.target.value }], amount: base.amount })
-              }
+              value={form.sku}
+              onChange={(e) => setField("sku", e.target.value)}
               className="w-full rounded bg-surface px-2 py-1 font-mono text-xs outline-none ring-1 ring-border focus:ring-[var(--order)]"
             />
           </Field>
@@ -108,13 +119,8 @@ export function CommandPanel({
               <input
                 type="number"
                 min={1}
-                value={item.quantity}
-                onChange={(e) =>
-                  setBase({
-                    items: [{ ...item, quantity: Number(e.target.value) || 1 }],
-                    amount: base.amount,
-                  })
-                }
+                value={form.qty}
+                onChange={(e) => setField("qty", e.target.value)}
                 className="w-full rounded bg-surface px-2 py-1 font-mono text-xs outline-none ring-1 ring-border focus:ring-[var(--order)]"
               />
             </Field>
@@ -123,10 +129,8 @@ export function CommandPanel({
                 type="number"
                 min={0}
                 step="0.01"
-                value={base.amount}
-                onChange={(e) =>
-                  setBase({ items: base.items, amount: Number(e.target.value) || 0 })
-                }
+                value={form.amount}
+                onChange={(e) => setField("amount", e.target.value)}
                 className="w-full rounded bg-surface px-2 py-1 font-mono text-xs outline-none ring-1 ring-border focus:ring-[var(--order)]"
               />
             </Field>
@@ -142,6 +146,15 @@ export function CommandPanel({
       )}
     </div>
   );
+}
+
+/** Turn a generated order into editable string fields. */
+function toForm(order: PlaceOrderBody) {
+  return {
+    sku: order.items[0].sku,
+    qty: String(order.items[0].quantity),
+    amount: String(order.amount),
+  };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

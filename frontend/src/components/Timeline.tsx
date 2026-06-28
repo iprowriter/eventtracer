@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import {
   colorOf,
   describe,
@@ -226,7 +226,8 @@ export function Timeline({
   const [grouped, setGrouped] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [hoverCid, setHoverCid] = useState<string | null>(null);
-  const [following, setFollowing] = useState(true);
+  const [following, setFollowing] = useState(true); // true = pinned to bottom
+  const [overflowing, setOverflowing] = useState(false); // is there anything to scroll?
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // The saga to spotlight: hovered row wins, else the one open in the drawer.
@@ -254,14 +255,20 @@ export function Timeline({
   function handleScroll() {
     const el = scrollRef.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    setFollowing(atBottom);
+    setFollowing(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
+    setOverflowing(el.scrollHeight - el.clientHeight > 8);
   }
 
   function jumpToLatest() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
     setFollowing(true);
+  }
+
+  function jumpToBeginning() {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = 0;
+    setFollowing(false);
   }
 
   function toggleGroup(cid: string) {
@@ -365,13 +372,22 @@ export function Timeline({
         )}
       </div>
 
-      {/* "Jump to latest" appears when the user has scrolled up off the bottom. */}
-      {!following && events.length > 0 && (
+      {/* Bidirectional jump: at the bottom it offers the beginning; once scrolled
+          up it offers the latest. Only shown when there's actually overflow. */}
+      {overflowing && events.length > 0 && (
         <button
-          onClick={jumpToLatest}
+          onClick={following ? jumpToBeginning : jumpToLatest}
           className="absolute bottom-16 right-5 flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs shadow-lg transition hover:bg-surface"
         >
-          <ArrowDown size={14} /> jump to latest
+          {following ? (
+            <>
+              <ArrowUp size={14} /> jump to beginning
+            </>
+          ) : (
+            <>
+              <ArrowDown size={14} /> jump to latest
+            </>
+          )}
         </button>
       )}
 
