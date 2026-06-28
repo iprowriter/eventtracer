@@ -48,7 +48,16 @@ export default function Home() {
     (body: PlaceOrderBody) => act(() => placeOrder(body)),
     [act],
   );
-  const onReplay = useCallback(() => act(() => replayLog()), [act]);
+  // Replay rebuilds the timeline from the Kafka log, so wipe the board first —
+  // otherwise the replayed copies stack under the live events (and collide on key).
+  const onReplay = useCallback(
+    () =>
+      act(async () => {
+        clear();
+        await replayLog();
+      }),
+    [act, clear],
+  );
   const onControl = useCallback(
     (service: string, action: "pause" | "resume") =>
       act(() => controlConsumer(service, action)),
@@ -60,6 +69,8 @@ export default function Home() {
       <TopBar
         connected={connected}
         busy={busy}
+        statuses={statuses}
+        onControl={onControl}
         dlqOnly={dlqOnly}
         dlqCount={dlqCount}
         onToggleDlq={() => setDlqOnly((v) => !v)}

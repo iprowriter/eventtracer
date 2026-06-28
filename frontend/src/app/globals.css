@@ -45,3 +45,25 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* New timeline rows fade + slide in as events arrive. No `forwards`, so the
+   element reverts to its own CSS afterwards (e.g. dimmed replayed rows). */
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-row-in {
+  animation: row-in 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-row-in {
+    animation: none;
+  }
+}

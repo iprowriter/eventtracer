@@ -1,8 +1,14 @@
 "use client";
 
+import { MailX, RotateCcw, Trash2 } from "lucide-react";
+import { KillConsumerMenu } from "@/components/KillConsumerMenu";
+import type { ConsumerStatus } from "@/lib/types";
+
 export function TopBar({
   connected,
   busy,
+  statuses,
+  onControl,
   dlqOnly,
   dlqCount,
   onToggleDlq,
@@ -11,6 +17,8 @@ export function TopBar({
 }: {
   connected: boolean;
   busy: boolean;
+  statuses: ConsumerStatus[];
+  onControl: (service: string, action: "pause" | "resume") => void;
   dlqOnly: boolean;
   dlqCount: number;
   onToggleDlq: () => void;
@@ -30,9 +38,10 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
+        <KillConsumerMenu statuses={statuses} onControl={onControl} />
         <button
           onClick={onToggleDlq}
-          className={`rounded-md border px-3 py-1.5 text-sm transition ${
+          className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition ${
             dlqOnly
               ? "border-[var(--failure)] bg-[var(--failure)]/15 text-[var(--failure)]"
               : "border-border hover:bg-surface-2"
@@ -40,7 +49,8 @@ export function TopBar({
           title="Show only dead-letter (.DLQ) events"
           aria-pressed={dlqOnly}
         >
-          💀 DLQ view
+          <MailX size={16} />
+          DLQ view
           {dlqCount > 0 && (
             <span className="ml-1.5 rounded-full bg-[var(--failure)]/20 px-1.5 py-0.5 text-xs text-[var(--failure)]">
               {dlqCount}
@@ -50,16 +60,18 @@ export function TopBar({
         <button
           onClick={onReplay}
           disabled={busy}
-          className="rounded-md border border-border px-3 py-1.5 text-sm transition hover:bg-surface-2 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm transition hover:bg-surface-2 disabled:opacity-50"
           title="Re-stream the whole history from the Kafka log (read-only)"
         >
-          ↻ replay
+          <RotateCcw size={16} />
+          replay
         </button>
         <button
           onClick={onClear}
-          className="rounded-md border border-border px-3 py-1.5 text-sm transition hover:bg-surface-2"
+          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm transition hover:bg-surface-2"
           title="Clear the timeline (local only)"
         >
+          <Trash2 size={16} />
           clear
         </button>
         <span className="ml-2 flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs">

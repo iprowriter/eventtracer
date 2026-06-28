@@ -1,13 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Clock,
+  CreditCard,
+  type LucideIcon,
+  ShoppingCart,
+  Skull,
+} from "lucide-react";
 import type { PlaceOrderBody } from "@/lib/api";
 import {
   bodyForScenario,
   sampleOrder,
   SCENARIOS,
   type Scenario,
+  type ScenarioId,
 } from "@/lib/scenarios";
+
+// Icon per scenario (UI concern, kept out of the scenarios data module).
+const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
+  place: ShoppingCart,
+  failed: CreditCard,
+  delayed: Clock,
+  poison: Skull,
+};
 
 export function CommandPanel({
   onRun,
@@ -47,29 +63,33 @@ export function CommandPanel({
       </h3>
 
       <div className="space-y-2">
-        {SCENARIOS.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => run(s)}
-            disabled={busy}
-            title={s.hint}
-            className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
-              active === s.id
-                ? "border-foreground bg-foreground font-medium text-background"
-                : "border-border bg-surface hover:border-foreground/40 hover:bg-surface-2"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+        {SCENARIOS.map((s) => {
+          const Icon = SCENARIO_ICONS[s.id];
+          return (
+            <button
+              key={s.id}
+              onClick={() => run(s)}
+              disabled={busy}
+              title={s.hint}
+              className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                active === s.id
+                  ? "border-foreground bg-foreground font-medium text-background"
+                  : "border-border bg-surface hover:border-foreground/40 hover:bg-surface-2"
+              }`}
+            >
+              <Icon size={16} className="shrink-0" />
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Optional: prove the inputs are real by editing or regenerating them. */}
       <button
         onClick={() => setEditing((e) => !e)}
-        className="mt-3 text-xs text-muted hover:text-foreground"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-foreground/80 transition hover:border-foreground hover:bg-surface-2 hover:text-foreground"
       >
-        {editing ? "▾ hide inputs" : "▸ edit order inputs"}
+        {editing ? "▾ hide order inputs" : "✎ edit order inputs"}
       </button>
 
       {editing && (

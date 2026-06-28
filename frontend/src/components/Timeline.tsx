@@ -39,7 +39,7 @@ function EventRow({
     <li
       onClick={() => onSelect(e)}
       title="Click to read the raw envelope"
-      className={`group flex cursor-pointer items-stretch gap-3 rounded-md px-2 transition hover:bg-surface-2 ${
+      className={`animate-row-in group flex cursor-pointer items-stretch gap-3 rounded-md px-2 transition hover:bg-surface-2 ${
         selected ? "bg-surface-2 ring-1 ring-[var(--order)]/40" : ""
       } ${e.replayed ? "opacity-60" : ""}`}
     >
@@ -108,7 +108,9 @@ function EventList({
     <ul>
       {events.map((e, i) => (
         <EventRow
-          key={eventKey(e)}
+          // Position-qualified so a legitimately duplicated event (e.g. a
+          // redelivery reusing the same eventId) can't collide on key.
+          key={`${eventKey(e)}::${i}`}
           e={e}
           selected={eventKey(e) === selectedKey}
           onSelect={onSelect}
@@ -264,7 +266,9 @@ export function Timeline({
 
       <div className="flex-1 overflow-y-auto px-3 py-2">
         {events.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted">{emptyMessage}</p>
+          <p className="animate-pulse py-12 text-center text-sm text-muted">
+            {emptyMessage}
+          </p>
         ) : grouped ? (
           <div className="space-y-2">
             {groups.map(([cid, evs]) => (
