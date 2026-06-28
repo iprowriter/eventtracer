@@ -128,6 +128,23 @@ services:
     container_name: eventtracer-refund-service
     command: node dist/apps/refund-service/main
 
+  # The Next.js UI. Built from its own context (not the shared app image). The
+  # browser runs on the host, so it reaches the gateway/monitor on localhost via
+  # their published ports — the frontend just serves the page on :3001.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: eventtracer-frontend:local
+    container_name: eventtracer-frontend
+    profiles: ["apps"]
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api-gateway
+      - event-monitor
+
 volumes:
   kafka-data:
   postgres-data:

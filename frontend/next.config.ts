@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Emit a self-contained server bundle (.next/standalone) for a small Docker image.
+  output: "standalone",
 };
 
 export default nextConfig;

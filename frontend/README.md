@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EventTracer — Frontend
 
-## Getting Started
+The Next.js dashboard for [EventTracer](../README.md): a live visualization of an event-driven
+order saga choreographing through Kafka. It is a **pure subscriber** — it issues commands to the
+API Gateway over HTTP and receives events back over a WebSocket; it never talks to Kafka directly.
 
-First, run the development server:
+## Stack
+
+Next.js (App Router) · React · TypeScript · Tailwind CSS v4 · socket.io-client · lucide-react.
+
+## Run it
+
+The UI needs the backend running (API Gateway on `:5000`, Event Monitor on `:4000`). From the
+repo root: `make up-all` (everything in Docker) or `make up` + the per-service dev targets. Then:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install      # first time
+npm run dev      # http://localhost:3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> Dev/start run on **:3001** (3000 is intentionally avoided).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuration
 
-## Learn More
+Backend URLs come from env vars (sensible defaults, so it works out of the box):
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:5000` | where commands are POSTed |
+| `NEXT_PUBLIC_MONITOR_URL` | `http://localhost:4000` | WebSocket events + `/replay` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/            # layout, page (dashboard composition), globals.css, icon.svg
+  components/     # TopBar, CommandPanel, ServiceBar, MetricCards, Timeline,
+                  # RawMessageDrawer, KillConsumerMenu, HowItWorks, Footer
+  hooks/          # useMonitor — the single socket.io subscription
+  lib/            # api (HTTP commands), events-meta (colors/labels/narration),
+                  # scenarios, types
+public/
+  how-it-works/   # drop walkthrough.mp4 here for the "how it works" modal
+```
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The dev/prod server runs on port 3001.
+- `next.config.ts` sets `output: "standalone"` for a lean Docker image (see `Dockerfile`).
+- Always-dark theme; event-family colors live as CSS tokens in `app/globals.css`.

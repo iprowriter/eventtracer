@@ -4,6 +4,7 @@
 .PHONY: dev build build-ok start test test-cov test-e2e lint format clean \
 	api-gateway-dev order-service-dev event-monitor-service-dev payment-service-dev \
 	shipping-service-dev notification-service-dev refund-service-dev \
+	frontend-install frontend-dev frontend-build frontend-lint \
 	up up-all down down-v rebuild logs ps db-schemas kafka-topics kafka-groups ui help
 
 # ----------------------------------------------------------------------------
@@ -32,6 +33,23 @@ notification-service-dev:
 
 refund-service-dev:
 	npm run start:dev -- refund-service
+
+# ----------------------------------------------------------------------------
+# Frontend (Next.js, lives in ./frontend with its OWN package.json). Dev server
+# runs on http://localhost:3001 (3000 is avoided). Needs the gateway (:5000) and
+# event-monitor (:4000) running for live data.
+# ----------------------------------------------------------------------------
+frontend-install:
+	cd frontend && npm install
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
+
+frontend-lint:
+	cd frontend && npm run lint
 
 # ----------------------------------------------------------------------------
 # Build / quality
@@ -102,7 +120,7 @@ kafka-groups:
 	docker exec eventtracer-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 
 ui:
-	open ui/index.html
+	open http://localhost:3001
 
 help:
 	@echo "EventTracer — make targets"
@@ -117,6 +135,12 @@ help:
 	@echo "  make notification-service-dev   - Notification service in watch mode"
 	@echo "  make refund-service-dev         - Refund service in watch mode"
 	@echo ""
+	@echo "Frontend (Next.js, http://localhost:3001):"
+	@echo "  make frontend-install           - install frontend deps"
+	@echo "  make frontend-dev               - run the Next.js dev server"
+	@echo "  make frontend-build             - production build of the frontend"
+	@echo "  make frontend-lint              - eslint the frontend"
+	@echo ""
 	@echo "Build / quality:"
 	@echo "  make build      - compile (default project)"
 	@echo "  make build-ok   - compile and print BUILD OK"
@@ -130,7 +154,7 @@ help:
 	@echo ""
 	@echo "Docker Compose:"
 	@echo "  make up         - start infra only (kafka + postgres) for host dev"
-	@echo "  make up-all     - build + start the WHOLE system (infra + 7 apps)"
+	@echo "  make up-all     - build + start the WHOLE system (infra + 7 apps + frontend)"
 	@echo "  make down       - stop and remove containers"
 	@echo "  make down-v     - down + drop volumes (resets Kafka log & DB schemas)"
 	@echo "  make rebuild    - rebuild the app image"
@@ -141,4 +165,4 @@ help:
 	@echo "  make db-schemas   - create per-service schemas on an existing volume"
 	@echo "  make kafka-topics - list Kafka topics"
 	@echo "  make kafka-groups - list Kafka consumer groups"
-	@echo "  make ui           - open the throwaway demo UI"
+	@echo "  make ui           - open the app in the browser (http://localhost:3001)"

@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.gitignore
+npm-debug.log*
+.DS_Store
+.env*
+.vscode
+.idea
+# Design reference image isn't needed in the runtime image.
+design-reference
