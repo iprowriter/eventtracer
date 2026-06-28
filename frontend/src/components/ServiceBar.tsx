@@ -74,7 +74,7 @@ export function ServiceBar({
                   </span>
                 )}
                 {controllable && (
-                  <span className="text-xs text-muted opacity-0 transition group-hover:opacity-100">
+                  <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted transition group-hover:border-foreground group-hover:text-foreground">
                     {paused ? "▶ resume" : "⏸ pause"}
                   </span>
                 )}

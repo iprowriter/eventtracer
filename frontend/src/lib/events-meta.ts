@@ -31,6 +31,15 @@ export function colorOf(eventType: string): string {
   return `var(${familyOf(eventType).colorVar})`;
 }
 
+/**
+ * Stable key for one event row. eventId alone isn't unique on the board: a DLQ
+ * card reuses the original event's id, and a redelivery re-sends the same id —
+ * so we qualify it with the eventType.
+ */
+export function eventKey(e: EventEnvelope): string {
+  return `${e.eventId}::${e.eventType}`;
+}
+
 /** The families shown in the timeline legend, in saga order. */
 export const LEGEND: EventFamily[] = [
   { key: "order", label: "order", colorVar: "--order" },
@@ -59,6 +68,25 @@ export function triggeredBy(e: EventEnvelope): string {
       if (e.eventType.endsWith(".DLQ")) return "3 failed attempts";
       return "—";
   }
+}
+
+/** A one-word outcome for a whole saga (a group of events), for grouped view. */
+export function sagaStatus(events: EventEnvelope[]): {
+  label: string;
+  colorVar: string;
+} {
+  const types = events.map((e) => e.eventType);
+  if (types.some((t) => t.endsWith(".DLQ")))
+    return { label: "dead-letter", colorVar: "--failure" };
+  if (types.includes("refund.initiated"))
+    return { label: "refunded", colorVar: "--refund" };
+  if (types.includes("payment.failed"))
+    return { label: "payment failed", colorVar: "--failure" };
+  if (types.includes("shipment.created"))
+    return { label: "shipped", colorVar: "--shipping" };
+  if (types.includes("payment.succeeded"))
+    return { label: "paid", colorVar: "--payment" };
+  return { label: "in progress", colorVar: "--muted" };
 }
 
 /** Plain-English narration of an event as it happens. */

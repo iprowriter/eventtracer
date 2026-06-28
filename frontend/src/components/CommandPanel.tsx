@@ -21,6 +21,8 @@ export function CommandPanel({
   const [base, setBase] = useState<PlaceOrderBody>(() => sampleOrder());
   const [editing, setEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // The last-run scenario stays highlighted (white) until another takes over.
+  const [active, setActive] = useState<string | null>(null);
 
   const item = base.items[0];
 
@@ -34,6 +36,7 @@ export function CommandPanel({
   }
 
   function run(scenario: Scenario) {
+    setActive(scenario.id);
     onRun(bodyForScenario(scenario, base), scenario.label);
   }
 
@@ -50,7 +53,11 @@ export function CommandPanel({
             onClick={() => run(s)}
             disabled={busy}
             title={s.hint}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-left text-sm transition hover:border-[var(--order)] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              active === s.id
+                ? "border-foreground bg-foreground font-medium text-background"
+                : "border-border bg-surface hover:border-foreground/40 hover:bg-surface-2"
+            }`}
           >
             {s.label}
           </button>
