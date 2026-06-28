@@ -58,21 +58,6 @@ export function Footer() {
 
       {/* Event-type key — each family has its own colour on the timeline. */}
       <div className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-6">
-        {/* <span className="text-xs uppercase tracking-wide text-muted">
-          event types
-        </span> */}
-        {/* {LEGEND.map((f) => (
-          <span
-            key={f.key}
-            className="flex items-center gap-1.5 text-xs text-muted"
-          >
-            <span
-              className="size-2.5 rounded-full"
-              style={{ background: `var(${f.colorVar})` }}
-            />
-            {f.label}
-          </span>
-        ))} */}
       </div>
 
       <p className="mx-auto mt-6 max-w-5xl text-xs text-muted/70">

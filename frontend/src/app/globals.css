@@ -46,6 +46,11 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Every enabled button is clickable; disabled ones keep their own cursor. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 /* New timeline rows fade + slide in as events arrive. No `forwards`, so the
    element reverts to its own CSS afterwards (e.g. dimmed replayed rows). */
 @keyframes row-in {
