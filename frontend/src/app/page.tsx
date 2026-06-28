@@ -19,7 +19,8 @@ import type { EventEnvelope } from "@/lib/types";
 import { useMonitor } from "@/hooks/useMonitor";
 
 export default function Home() {
-  const { connected, events, statuses, clear } = useMonitor();
+  const { connected, reconnecting, events, statuses, clear, maxEvents } =
+    useMonitor();
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<EventEnvelope | null>(null);
   const [dlqOnly, setDlqOnly] = useState(false);
@@ -78,6 +79,14 @@ export default function Home() {
         onClear={clear}
       />
 
+      {/* Shown only after a live connection drops (not on first connect). */}
+      {reconnecting && (
+        <div className="flex items-center justify-center gap-2 bg-[var(--paused)]/15 px-4 py-1.5 text-xs text-[var(--paused)]">
+          <span className="size-2 animate-pulse rounded-full bg-[var(--paused)]" />
+          Connection lost — reconnecting to the Event Monitor…
+        </div>
+      )}
+
       {/* Dashboard fills exactly one viewport (minus the 3.5rem top bar); the
           footer flows below the fold. */}
       <div className="relative h-[calc(100vh-3.5rem)] overflow-hidden">
@@ -94,6 +103,8 @@ export default function Home() {
             <Timeline
               events={visibleEvents}
               selectedKey={selected ? eventKey(selected) : null}
+              selectedCorrelationId={selected?.correlationId ?? null}
+              maxEvents={maxEvents}
               onSelect={setSelected}
               filterNote={dlqOnly ? "DLQ only" : null}
               emptyMessage={
