@@ -1,6 +1,7 @@
 "use client";
 
 import { MailX, RotateCcw, Trash2 } from "lucide-react";
+import { HowItWorks } from "@/components/HowItWorks";
 import { KillConsumerMenu } from "@/components/KillConsumerMenu";
 import type { ConsumerStatus } from "@/lib/types";
 
@@ -86,6 +87,7 @@ export function TopBar({
           />
           websocket · {connected ? "live" : "offline"}
         </span>
+        <HowItWorks />
       </div>
     </header>
   );
