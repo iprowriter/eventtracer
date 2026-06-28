@@ -9,8 +9,11 @@ import {
   Topics,
 } from '@app/events';
 import { OutboxMessage } from '@app/outbox';
-import { Payment } from './payment.entity';
+import { Payment, PaymentStatus } from './payment.entity';
 import { decidePaymentOutcome } from './payment.simulator';
+
+/** How long the 'SLOW' sentinel sku stalls this consumer before processing. */
+const SLOW_DELAY_MS = 4000;
 
 @Injectable()
 export class PaymentsService {
@@ -30,6 +33,17 @@ export class PaymentsService {
       throw new Error(`Unprocessable order ${order.orderId}: POISON sku`);
     }
 
+    // Delay demo: an item with sku 'SLOW' makes this consumer take its time
+    // before processing. The order's payment event then lands seconds after
+    // order.created, so you can watch consumer lag build on the timeline and
+    // then drain. Only the timing changes — the outcome is unaffected.
+    if (order.items.some((item) => item.sku === 'SLOW')) {
+      this.logger.log(
+        `Order ${order.orderId} has SLOW sku — delaying ${SLOW_DELAY_MS}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY_MS));
+    }
+
     await this.dataSource.transaction(async (manager) => {
       const payments = manager.getRepository(Payment);
       const outbox = manager.getRepository(OutboxMessage);
@@ -46,7 +60,14 @@ export class PaymentsService {
       }
 
       // Deterministic decision — same orderId always resolves the same way.
-      const outcome = decidePaymentOutcome(order.orderId);
+      // Override: an item with sku 'FAIL' forces a declined payment (the
+      // failed-payment scenario button) — the symmetric twin of 'POISON', but
+      // a normal business failure (→ refund saga) rather than a DLQ. Still
+      // deterministic, so the demo is repeatable.
+      const forcedFail = order.items.some((item) => item.sku === 'FAIL');
+      const outcome: PaymentStatus = forcedFail
+        ? 'FAILED'
+        : decidePaymentOutcome(order.orderId);
       const paymentId = randomUUID();
       const reason = outcome === 'FAILED' ? 'Card declined (simulated)' : null;
 

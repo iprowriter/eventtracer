@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConsumerControl } from '@app/kafka';
 import { OUTBOX_PRODUCER, OutboxMessage, OutboxRelay } from '@app/outbox';
 import { SnakeNamingStrategy } from '@app/persistence';
 import { PaymentServiceController } from './payment-service.controller';
@@ -40,6 +41,8 @@ import { PaymentsService } from './payments/payments.service';
     ]),
   ],
   controllers: [PaymentServiceController],
-  providers: [PaymentsService, OutboxRelay],
+  // ConsumerControl powers the kill-a-consumer demo (ADR-014); main.ts binds it
+  // to the live kafkajs consumer after listen().
+  providers: [PaymentsService, OutboxRelay, ConsumerControl],
 })
 export class PaymentServiceModule {}

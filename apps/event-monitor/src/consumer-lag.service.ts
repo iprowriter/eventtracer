@@ -12,8 +12,12 @@ import { EventMonitorGateway } from './event-monitor.gateway';
 /** One row in the UI's service-health bar. */
 export interface ConsumerStatus {
   service: string;
-  /** 'up' = the group has at least one live member; 'down' = killed/empty. */
-  status: 'up' | 'down';
+  /**
+   * 'up' = the group has a live member; 'down' = killed/empty;
+   * 'paused' = deliberately paused via the control plane (ADR-014). A paused
+   * consumer is still a group member, so we track it separately and override.
+   */
+  status: 'up' | 'down' | 'paused';
   /** Total un-consumed messages across all of the group's partitions. */
   lag: number;
 }
@@ -75,8 +79,20 @@ export class ConsumerLagService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ConsumerLagService.name);
   private admin?: Admin;
   private polling = false; // guards against overlapping polls if one runs slow
+  /** Services the UI has paused via the control plane (ADR-014). */
+  private readonly paused = new Set<string>();
 
   constructor(private readonly gateway: EventMonitorGateway) {}
+
+  /**
+   * Record a pause/resume so the next status poll reports the service as
+   * 'paused' rather than 'up' (it's still a group member while paused). Fed by
+   * the monitor's control-topic handler — observability stays decoupled (ADR-002).
+   */
+  setPaused(service: string, isPaused: boolean): void {
+    if (isPaused) this.paused.add(service);
+    else this.paused.delete(service);
+  }
 
   async onModuleInit() {
     const kafka = new Kafka({
@@ -123,6 +139,10 @@ export class ConsumerLagService implements OnModuleInit, OnModuleDestroy {
     } catch {
       status = 'down';
     }
+
+    // A paused consumer is still a live member, so override 'up' → 'paused'
+    // (ADR-014). If it's genuinely down, leave that — paused is moot.
+    if (status === 'up' && this.paused.has(service)) status = 'paused';
 
     // LAG — high-water mark minus the group's committed offset, per partition.
     let lag = 0;

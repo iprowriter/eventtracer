@@ -1,13 +1,32 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { type DeadLetter, type EventEnvelope, Topics, dlq } from '@app/events';
+import {
+  type ConsumerControlCommand,
+  ControlTopic,
+  type DeadLetter,
+  type EventEnvelope,
+  Topics,
+  dlq,
+} from '@app/events';
+import { ConsumerLagService } from './consumer-lag.service';
 import { EventMonitorGateway } from './event-monitor.gateway';
 
 @Controller()
 export class EventMonitorController {
   private readonly logger = new Logger(EventMonitorController.name);
 
-  constructor(private readonly gateway: EventMonitorGateway) {}
+  constructor(
+    private readonly gateway: EventMonitorGateway,
+    private readonly lag: ConsumerLagService,
+  ) {}
+
+  // Kill-a-consumer (ADR-014): the monitor also watches the control topic so it
+  // can mark a paused service in the health bar. It only READS — the pausing
+  // happens in the domain service. Observability stays decoupled (ADR-002).
+  @EventPattern(ControlTopic)
+  handleControl(@Payload() cmd: ConsumerControlCommand): void {
+    this.lag.setPaused(cmd.service, cmd.action === 'pause');
+  }
 
   // As each service comes online we add one @EventPattern per topic here — the
   // monitor is the ONE place allowed to read every topic (ADR-002, rule #3). We

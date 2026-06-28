@@ -83,6 +83,20 @@ describe('PaymentsService — duplicate delivery', () => {
     expect(savedOutbox.payload.correlationId).toBe(order.orderId);
   });
 
+  it("forces a payment.failed when an item has sku 'FAIL'", async () => {
+    payments.findOne.mockResolvedValue(null);
+
+    await service.handleOrderCreated({
+      orderId: 'order-fail',
+      items: [{ sku: 'FAIL', quantity: 1 }],
+      amount: 10,
+    });
+
+    expect(payments.save).toHaveBeenCalledTimes(1);
+    const savedOutbox = outbox.save.mock.calls[0][0];
+    expect(savedOutbox.topic).toBe(Topics.PaymentFailed);
+  });
+
   it('is a no-op on redelivery (payment already processed)', async () => {
     payments.findOne.mockResolvedValue({ orderId: order.orderId });
 

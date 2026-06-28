@@ -181,9 +181,9 @@ Two-column layout (Next.js + TypeScript).
 
 | Scenario | What it demonstrates |
 |---|---|
-| **Failed payment** | `payment.failed` → Refund consumes → compensation saga → notification. |
-| **Delayed order** | Injected processing latency; consumer lag rises then drains. |
-| **Kill shipping consumer** | Events buffer in the partition while the consumer is down; on restart it catches up and lag returns to 0 — the clearest "this isn't a REST call" moment. |
+| **Failed payment** | POST an order with an item of sku `FAIL`; payment-service forces `payment.failed` (deterministic, the business-failure twin of `POISON`) → Refund consumes → compensation saga → notification. |
+| **Delayed order** | POST an order with an item of sku `SLOW`; payment-service stalls before processing, so the payment event lands seconds later — consumer lag rises then drains. |
+| **Kill (pause) a consumer** | `POST /control/:service/:action` (pause\|resume, for payment-service or shipping-service) pauses that service's Kafka consumer on its domain topic. Events buffer in the partition while paused (lag climbs, chip shows `paused`); resume drains the backlog and lag returns to 0 — the clearest "this isn't a REST call" moment, now one-click and reversible (ADR-014). |
 | **Duplicate delivery** | `POST /orders/:id/redeliver` → the Order Service re-queues the order's *original* `order.created` (same `eventId`). Payment dedupes on `orderId`, Notification on the consumed `eventId` — so the column gains a 2nd `order.created` card but no second `payment.succeeded`/`shipment.created`/`notification.sent`. No second charge (ADR-013). |
 | **Poison message → DLQ** | POST an order with an item of sku `POISON`; payment-service can never process it, so after 3 retries the `order.created` is routed to `order.created.DLQ` and shows as a red card in the UI. |
 | **Replay** | The Event Monitor re-reads each topic from offset 0 with a throwaway consumer group and re-streams the history to the UI (`POST /replay`), rebuilding the timeline from the log alone. Read-only — it never produces, so the saga is not re-triggered (ADR-012). |

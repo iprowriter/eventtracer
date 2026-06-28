@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConsumerControl } from '@app/kafka';
 import { OUTBOX_PRODUCER, OutboxMessage, OutboxRelay } from '@app/outbox';
 import { SnakeNamingStrategy } from '@app/persistence';
 import { ShippingServiceController } from './shipping-service.controller';
@@ -38,6 +39,7 @@ import { ShipmentsService } from './shipments/shipments.service';
     ]),
   ],
   controllers: [ShippingServiceController],
-  providers: [ShipmentsService, OutboxRelay],
+  // ConsumerControl powers the kill-a-consumer demo (ADR-014).
+  providers: [ShipmentsService, OutboxRelay, ConsumerControl],
 })
 export class ShippingServiceModule {}

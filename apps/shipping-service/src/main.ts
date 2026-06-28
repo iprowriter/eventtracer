@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { Topics } from '@app/events';
+import { bindConsumerControl } from '@app/kafka';
 import { ShippingServiceModule } from './shipping-service.module';
 
 async function bootstrap() {
@@ -20,5 +22,8 @@ async function bootstrap() {
     },
   );
   await app.listen();
+  // Wire the live consumer to the control plane (ADR-014): the UI can pause/
+  // resume consumption of payment.succeeded.
+  bindConsumerControl(app, Topics.PaymentSucceeded);
 }
 void bootstrap();

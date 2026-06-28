@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Dark by default — this is an always-dark dashboard, not theme-aware. */
+:root {
+  --background: #0b0d10; /* app canvas */
+  --surface: #14171c; /* panels / cards */
+  --surface-2: #1b1f26; /* hover / insets */
+  --border: #242a32;
+  --foreground: #e6e8eb;
+  --muted: #8b929c; /* secondary text */
+
+  /* Per-event-family accents (the timeline legend). */
+  --order: #34d399; /* green  */
+  --payment: #38bdf8; /* blue   */
+  --shipping: #a78bfa; /* purple */
+  --notification: #2dd4bf; /* teal   */
+  --refund: #f59e0b; /* orange */
+  --failure: #f87171; /* red — failure / DLQ */
+
+  /* Service-health states. */
+  --up: #34d399;
+  --paused: #f59e0b;
+  --down: #f87171;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-order: var(--order);
+  --color-payment: var(--payment);
+  --color-shipping: var(--shipping);
+  --color-notification: var(--notification);
+  --color-refund: var(--refund);
+  --color-failure: var(--failure);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

@@ -317,6 +317,41 @@ effectively redelivers the same message.
 
 ---
 
+## ADR-014 — Kill-a-consumer is a reversible pause driven over a control topic
+
+**Status:** Accepted (realizes the kill-a-consumer demo from specs §7 as a one-click UI action).
+
+**Context.** specs §7 calls for a "kill a consumer" scenario: stop a service, watch its events
+buffer as consumer lag, restart it, watch the lag drain. Originally this was a manual `Ctrl+C`
+in a terminal. To trigger it from the UI we need a browser-reachable mechanism. Options: (a) the
+browser shells out to `docker stop`/process kill — impossible from a browser and not reversible
+in-process; (b) block inside the message handler until released — risks Kafka session-timeout
+rebalances and unpredictable reprocessing; (c) pause/resume the service's Kafka consumer on its
+domain topic via kafkajs `consumer.pause/resume`.
+
+**Decision.** Option (c). A new **`control.consumer`** topic carries `{service, action}` messages.
+`POST /control/:service/:action` on the gateway publishes one (rule #1: intent enters via the
+gateway, never the browser touching Kafka). Each **controllable service** (scope: payment +
+shipping) consumes `control.consumer` and, for messages addressed to it, calls a shared
+`ConsumerControl` (in `libs/kafka`) that pauses/resumes **only its domain topic** — the control
+topic keeps flowing, so resume always lands. `ConsumerControl` is wired to the live kafkajs
+consumer in `main.ts` after `listen()` via `app.unwrap<ServerKafka>()`. The **Event Monitor**
+also consumes `control.consumer` (read-only) and marks the service `paused` in the health bar it
+already broadcasts — observability stays decoupled (ADR-002).
+
+**Consequences.**
+- Pausing stops fetching the domain topic, so its events buffer in the partition (lag climbs);
+  resume drains them — the exact "this isn't a REST call" proof, now reversible from the UI.
+- The consumer stays a group member while paused, so describeGroups still shows it `up`; the
+  monitor tracks the pause set separately and overrides the status to `paused`.
+- A short, demo-friendly companion of the same idea: sentinel skus `FAIL` (force `payment.failed`)
+  and `SLOW` (delay processing) need no control plane — they ride an ordinary order POST, like
+  `POISON` (ADR-007).
+- Reaching the kafkajs consumer uses `unwrap()` + a narrow cast to a protected field; contained to
+  one helper in `libs/kafka`. If Nest's internals change, only that helper needs updating.
+
+---
+
 ## Decision summary
 
 | ADR | Decision | One-line why |
@@ -334,3 +369,4 @@ effectively redelivers the same message.
 | 011 | Notification publishes `notification.sent` | Make the notify step visible in the UI |
 | 012 | Read-only replay from the log | Rebuild the timeline without re-triggering the saga |
 | 013 | Redeliver the identical event from its owner | Prove idempotency: no second charge on redelivery |
+| 014 | Kill-a-consumer = reversible pause over a control topic | One-click pause/resume; lag builds then drains |
