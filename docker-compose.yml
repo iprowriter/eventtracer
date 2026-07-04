@@ -33,7 +33,7 @@ services:
     image: apache/kafka:3.9.0
     container_name: eventtracer-kafka
     ports:
-      - "9092:9092"            # host apps connect here (localhost:9092)
+      - "127.0.0.1:9092:9092"  # localhost only (host apps); not exposed publicly
     environment:
       # --- KRaft identity (no Zookeeper, per ADR-005) ---
       KAFKA_NODE_ID: 1
@@ -71,7 +71,7 @@ services:
     image: postgres:16
     container_name: eventtracer-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # localhost only; never expose the DB publicly
     environment:
       POSTGRES_USER: eventtracer
       POSTGRES_PASSWORD: eventtracer
@@ -96,7 +96,7 @@ services:
       <<: *app-env
       PORT: 5000
     ports:
-      - "5000:5000" # public REST surface (POST /orders, /orders/:id/redeliver)
+      - "127.0.0.1:5000:5000" # localhost only; reached from the internet via Caddy
 
   event-monitor:
     <<: *app
@@ -106,7 +106,7 @@ services:
       <<: *app-env
       PORT: 4000
     ports:
-      - "4000:4000" # WebSocket + replay endpoint the UI connects to
+      - "127.0.0.1:4000:4000" # localhost only; reached from the internet via Caddy
 
   order-service:
     <<: *app
@@ -150,7 +150,7 @@ services:
     profiles: ["apps"]
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001" # localhost only; reached from the internet via Caddy
     depends_on:
       - api-gateway
       - event-monitor
