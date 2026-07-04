@@ -54,6 +54,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      # --- Heap cap: a single-broker demo needs nowhere near the JVM's default
+      #     (which sizes off host RAM). Pinning it keeps Kafka within a small,
+      #     predictable footprint so the whole stack fits a 4 GB box. ---
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms512m"
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
