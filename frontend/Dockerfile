@@ -9,6 +9,16 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# The browser-facing URLs are inlined into the client bundle at build time
+# (Next.js NEXT_PUBLIC_*). Passed as build args — default to localhost so local
+# builds are unchanged; the deploy overrides them (via compose .env) with the
+# public https origin. .env* is dockerignored, so these args are the only source.
+ARG NEXT_PUBLIC_GATEWAY_URL=http://localhost:5000
+ARG NEXT_PUBLIC_MONITOR_URL=http://localhost:4000
+ENV NEXT_PUBLIC_GATEWAY_URL=$NEXT_PUBLIC_GATEWAY_URL
+ENV NEXT_PUBLIC_MONITOR_URL=$NEXT_PUBLIC_MONITOR_URL
+
 # next.config.ts sets output:"standalone" → .next/standalone holds server.js + deps.
 RUN npm run build
 
