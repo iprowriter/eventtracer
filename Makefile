@@ -5,7 +5,7 @@
 	api-gateway-dev order-service-dev event-monitor-service-dev payment-service-dev \
 	shipping-service-dev notification-service-dev refund-service-dev \
 	frontend-install frontend-dev frontend-build frontend-lint \
-	up up-all down down-v rebuild logs ps db-schemas kafka-topics kafka-groups ui help
+	up up-all down down-v rebuild logs ps deploy db-schemas kafka-topics kafka-groups ui help
 
 # ----------------------------------------------------------------------------
 # Local dev (run an app on the host with hot reload; needs `make up` first)
@@ -108,6 +108,16 @@ ps:
 	docker compose --profile apps ps
 
 # ----------------------------------------------------------------------------
+# Deployment. Run this ON THE SERVER (`ssh hetzner && cd eventtracer`) to ship
+# the latest main: pull the code, rebuild changed images (layer cache keeps it
+# fast), and recreate any container whose image/config changed. Kafka, Postgres,
+# and their data volumes keep running. See "Redeploying" in README.md.
+# ----------------------------------------------------------------------------
+deploy:
+	git pull
+	docker compose --profile apps up -d --build
+
+# ----------------------------------------------------------------------------
 # Postgres / Kafka helpers (run against the infra containers)
 # ----------------------------------------------------------------------------
 db-schemas:
@@ -160,6 +170,9 @@ help:
 	@echo "  make rebuild    - rebuild the app image"
 	@echo "  make logs       - tail logs of all app + infra containers"
 	@echo "  make ps         - list containers"
+	@echo ""
+	@echo "Deployment (run on the server after 'ssh hetzner && cd eventtracer'):"
+	@echo "  make deploy     - git pull + rebuild + recreate the whole stack"
 	@echo ""
 	@echo "Helpers:"
 	@echo "  make db-schemas   - create per-service schemas on an existing volume"

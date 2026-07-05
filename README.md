@@ -202,6 +202,25 @@ database ports are bound to `127.0.0.1` (only Caddy and the host can reach them)
 firewall that allows just `22/80/443` inbound. Additional projects follow the same shape — one
 subdomain, one Caddy block, one shared proxy.
 
+### Redeploying after a change
+
+Deployment is git-based — push locally, then pull and rebuild on the server:
+
+```bash
+# locally
+git push
+
+# on the server
+ssh <host> && cd eventtracer
+make deploy          # git pull + rebuild changed images + recreate containers
+```
+
+`make deploy` is safe to run repeatedly: Docker's layer cache skips unchanged steps, the Kafka and
+Postgres data volumes persist, and only containers whose image or config actually changed are
+recreated. The frontend's public URLs come from a server-only `.env` (git-ignored), so rebuilt
+bundles keep pointing at the live origin. A **routing** change is the exception — edit
+`/etc/caddy/Caddyfile` and `sudo systemctl reload caddy`, since Caddy runs outside Compose.
+
 ## Ports
 
 | Port | Service |
