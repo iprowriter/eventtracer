@@ -7,6 +7,8 @@ compensated, dead-lettered, replayed — streamed to the browser in real time.
 It is **not** a real e-commerce platform. It is a simulator whose product is the *live
 visualization* of how independent services choreograph through an event log.
 
+> 🔗 **Live demo:** **[eventtracer.cloudblick.com](https://eventtracer.cloudblick.com)** — hosted end to end on a Hetzner VPS.
+
 ---
 ![EventTracer HomePage](./assets/eventtracer-homepage.png)
 
@@ -86,7 +88,7 @@ The browser sends **commands**; services react to **events**. Kafka runs in **KR
 **Backend:** TypeScript · NestJS (monorepo, Kafka microservice transport) · Apache Kafka (KRaft)
 · PostgreSQL (schema per service) · TypeORM.
 **Frontend:** Next.js (App Router) · React · TypeScript · Tailwind CSS · socket.io-client · lucide-react.
-**Infra:** Docker Compose.
+**Infra:** Docker Compose · Caddy (reverse proxy + automatic TLS) · Hetzner Cloud VPS.
 
 ## Key architectural decisions
 
@@ -176,6 +178,29 @@ Open **http://localhost:3001** and try, in order:
 5. **Replay** — the board rebuilds from the Kafka log (read-only, dimmed rows).
 
 Click any event to inspect its raw envelope; switch **stream / grouped** to see sagas as cards.
+
+## Deployment
+
+A live instance runs **end to end on a single [Hetzner](https://www.hetzner.com/) Cloud VPS**
+(Ubuntu, 4 GB) at **[eventtracer.cloudblick.com](https://eventtracer.cloudblick.com)**.
+
+The entire stack — all seven NestJS apps, the Next.js UI, Kafka (KRaft), and PostgreSQL — runs
+from the same `docker compose --profile apps up` on the box. A host-level
+**[Caddy](https://caddyserver.com)** reverse proxy terminates TLS (automatic Let's Encrypt
+certificates) and routes everything under one domain:
+
+| Path | Upstream |
+|---|---|
+| `/api/*` | API Gateway (`:5000`) — the `/api` prefix is stripped |
+| `/socket.io/*`, `/replay` | Event Monitor (`:4000`) — including the WebSocket upgrade → `wss://` |
+| `/*` | Frontend (`:3001`) |
+
+Because the browser sees a **single origin**, there's no CORS to manage and the event stream runs
+over secure `wss://`. The frontend's `NEXT_PUBLIC_*` URLs are baked at image-build time (compose
+build args), so the deployed bundle points at the public origin. For defense in depth, the app and
+database ports are bound to `127.0.0.1` (only Caddy and the host can reach them) behind a cloud
+firewall that allows just `22/80/443` inbound. Additional projects follow the same shape — one
+subdomain, one Caddy block, one shared proxy.
 
 ## Ports
 
