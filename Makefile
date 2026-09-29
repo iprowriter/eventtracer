@@ -36,7 +36,7 @@ refund-service-dev:
 
 # ----------------------------------------------------------------------------
 # Frontend (Next.js, lives in ./frontend with its OWN package.json). Dev server
-# runs on http://localhost:3001 (3000 is avoided). Needs the gateway (:5000) and
+# runs on http://localhost:3001 (3000 is avoided). Needs the gateway (:5050) and
 # event-monitor (:4000) running for live data.
 # ----------------------------------------------------------------------------
 frontend-install:
@@ -108,7 +108,7 @@ ps:
 	docker compose --profile apps ps
 
 # ----------------------------------------------------------------------------
-# Deployment. Run this ON THE SERVER (`ssh hetzner && cd eventtracer`) to ship
+# Deployment. Run this ON YOUR SERVER (`ssh <host> && cd eventtracer`) to ship
 # the latest main: pull the code, rebuild changed images (layer cache keeps it
 # fast), and recreate any container whose image/config changed. Kafka, Postgres,
 # and their data volumes keep running. See "Redeploying" in README.md.
@@ -124,10 +124,10 @@ db-schemas:
 	docker exec -i eventtracer-postgres psql -U eventtracer -d eventtracer < initdb/01-create-schemas.sql
 
 kafka-topics:
-	docker exec eventtracer-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+	docker exec eventtracer-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --list
 
 kafka-groups:
-	docker exec eventtracer-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+	docker exec eventtracer-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:19092 --list
 
 ui:
 	open http://localhost:3001
@@ -137,7 +137,7 @@ help:
 	@echo ""
 	@echo "Dev (host, hot reload — run 'make up' first):"
 	@echo "  make dev                        - default app (api-gateway) in watch mode"
-	@echo "  make api-gateway-dev            - API gateway (HTTP :5000) in watch mode"
+	@echo "  make api-gateway-dev            - API gateway (HTTP :5050) in watch mode"
 	@echo "  make order-service-dev          - Order service in watch mode"
 	@echo "  make event-monitor-service-dev  - Event Monitor (HTTP/WS :4000) in watch mode"
 	@echo "  make payment-service-dev        - Payment service in watch mode"
@@ -171,7 +171,7 @@ help:
 	@echo "  make logs       - tail logs of all app + infra containers"
 	@echo "  make ps         - list containers"
 	@echo ""
-	@echo "Deployment (run on the server after 'ssh hetzner && cd eventtracer'):"
+	@echo "Deployment (run on your server after 'ssh <host> && cd eventtracer'):"
 	@echo "  make deploy     - git pull + rebuild + recreate the whole stack"
 	@echo ""
 	@echo "Helpers:"

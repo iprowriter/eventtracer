@@ -10,7 +10,7 @@ Next.js (App Router) · React · TypeScript · Tailwind CSS v4 · socket.io-clie
 
 ## Run it
 
-The UI needs the backend running (API Gateway on `:5000`, Event Monitor on `:4000`). From the
+The UI needs the backend running (API Gateway on `:5050`, Event Monitor on `:4000`). From the
 repo root: `make up-all` (everything in Docker) or `make up` + the per-service dev targets. Then:
 
 ```bash
@@ -28,7 +28,7 @@ Backend URLs come from env vars (sensible defaults, so it works out of the box):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:5000` | where commands are POSTed |
+| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:5050` | where commands are POSTed |
 | `NEXT_PUBLIC_MONITOR_URL` | `http://localhost:4000` | WebSocket events + `/replay` |
 
 ## Structure

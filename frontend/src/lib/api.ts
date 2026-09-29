@@ -2,7 +2,7 @@
 // COMMANDS here (rule #1) — it never publishes to Kafka. Events come back over
 // the WebSocket (see useMonitor).
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:5000";
+const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:5050";
 const MONITOR = process.env.NEXT_PUBLIC_MONITOR_URL ?? "http://localhost:4000";
 
 export interface OrderItem {

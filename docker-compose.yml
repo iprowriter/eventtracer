@@ -4,6 +4,11 @@
 # compose profile, so `docker compose up` still starts ONLY infra (kafka+pg) for
 # the usual dev workflow (apps via `npm run start:dev -- <app>`), while
 # `docker compose --profile apps up` brings up the whole system. See the Makefile.
+#
+# Host ports are overridable (e.g. in a git-ignored .env next to this file) for
+# when something else on the machine already holds one: GATEWAY_PORT (5050),
+# MONITOR_PORT (4000), FRONTEND_PORT (3001), POSTGRES_HOST_PORT (5432),
+# KAFKA_HOST_PORT (9092). Container-internal ports never change.
 x-app-env: &app-env
   # In-network addresses: apps reach Kafka on its INTERNAL listener and Postgres
   # by service name. (On the host, the same code defaults to localhost:9092.)
@@ -32,8 +37,9 @@ services:
   kafka:
     image: apache/kafka:3.9.0
     container_name: eventtracer-kafka
+    restart: unless-stopped # come back after a host reboot (the apps can't run without it)
     ports:
-      - "127.0.0.1:9092:9092"  # localhost only (host apps); not exposed publicly
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9092}:9092"  # localhost only (host apps); not exposed publicly
     environment:
       # --- KRaft identity (no Zookeeper, per ADR-005) ---
       KAFKA_NODE_ID: 1
@@ -43,7 +49,8 @@ services:
       # --- Listeners: use ://:PORT (empty host = bind all interfaces).
       #     Do NOT write 0.0.0.0 here — this image rejects it as an advertised addr. ---
       KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:19092,EXTERNAL://:9092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:9092
+      #     EXTERNAL advertises the HOST port so host clients reconnect to the mapped port.
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9092}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
@@ -62,7 +69,9 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      # Probe the INTERNAL listener: EXTERNAL advertises the host port, which
+      # isn't reachable from inside the container when KAFKA_HOST_PORT is changed.
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:19092 >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 10
@@ -70,8 +79,9 @@ services:
   postgres:
     image: postgres:16
     container_name: eventtracer-postgres
+    restart: unless-stopped # come back after a host reboot (the apps can't run without it)
     ports:
-      - "127.0.0.1:5432:5432"  # localhost only; never expose the DB publicly
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"  # localhost only; never expose the DB publicly
     environment:
       POSTGRES_USER: eventtracer
       POSTGRES_PASSWORD: eventtracer
@@ -94,9 +104,10 @@ services:
     command: node dist/apps/api-gateway/main
     environment:
       <<: *app-env
-      PORT: 5000
+      # 5050, not 5000: macOS's AirPlay Receiver listens on :5000 by default.
+      PORT: 5050
     ports:
-      - "127.0.0.1:5000:5000" # localhost only; reached from the internet via Caddy
+      - "127.0.0.1:${GATEWAY_PORT:-5050}:5050" # localhost only; put a reverse proxy in front to expose it
 
   event-monitor:
     <<: *app
@@ -106,7 +117,7 @@ services:
       <<: *app-env
       PORT: 4000
     ports:
-      - "127.0.0.1:4000:4000" # localhost only; reached from the internet via Caddy
+      - "127.0.0.1:${MONITOR_PORT:-4000}:4000" # localhost only; put a reverse proxy in front to expose it
 
   order-service:
     <<: *app
@@ -141,16 +152,17 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       # Public URLs baked into the client bundle. Default to localhost for local
-      # builds; the server's .env overrides them with the https origin.
+      # builds (following any host-port override); a server's .env overrides them
+      # with its public https origin.
       args:
-        NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:5000}
-        NEXT_PUBLIC_MONITOR_URL: ${NEXT_PUBLIC_MONITOR_URL:-http://localhost:4000}
+        NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:${GATEWAY_PORT:-5050}}
+        NEXT_PUBLIC_MONITOR_URL: ${NEXT_PUBLIC_MONITOR_URL:-http://localhost:${MONITOR_PORT:-4000}}
     image: eventtracer-frontend:local
     container_name: eventtracer-frontend
     profiles: ["apps"]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3001:3001" # localhost only; reached from the internet via Caddy
+      - "127.0.0.1:${FRONTEND_PORT:-3001}:3001" # localhost only; put a reverse proxy in front to expose it
     depends_on:
       - api-gateway
       - event-monitor

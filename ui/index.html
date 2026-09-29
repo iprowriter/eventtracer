@@ -156,7 +156,7 @@
     async function redeliver(orderId, btn) {
       btn.disabled = true;
       try {
-        const res = await fetch('http://localhost:5000/orders/' + orderId + '/redeliver',
+        const res = await fetch('http://localhost:5050/orders/' + orderId + '/redeliver',
           { method: 'POST' });
         if (!res.ok) throw new Error('redeliver failed: ' + res.status);
       } catch (err) {

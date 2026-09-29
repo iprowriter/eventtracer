@@ -7,7 +7,9 @@ compensated, dead-lettered, replayed — streamed to the browser in real time.
 It is **not** a real e-commerce platform. It is a simulator whose product is the *live
 visualization* of how independent services choreograph through an event log.
 
-> 🔗 **Live demo:** **[eventtracer.cloudblick.com](https://eventtracer.cloudblick.com)** — hosted end to end on a Hetzner VPS.
+> ▶️ **Run it yourself:** the whole system — Kafka, Postgres, seven services, and the UI — starts
+> with one command. Clone the repo, run `make up-all`, and open http://localhost:3001
+> ([Getting started](#getting-started)). Or watch the walkthrough below first.
 
 ---
 
@@ -95,7 +97,7 @@ The browser sends **commands**; services react to **events**. Kafka runs in **KR
 **Backend:** TypeScript · NestJS (monorepo, Kafka microservice transport) · Apache Kafka (KRaft)
 · PostgreSQL (schema per service) · TypeORM.
 **Frontend:** Next.js (App Router) · React · TypeScript · Tailwind CSS · socket.io-client · lucide-react.
-**Infra:** Docker Compose · Caddy (reverse proxy + automatic TLS) · Hetzner Cloud VPS.
+**Infra:** Docker Compose · runs locally with one command; optional single-VPS deploy behind Caddy (reverse proxy + automatic TLS).
 
 ## Key architectural decisions
 
@@ -157,7 +159,7 @@ Run the infrastructure in Docker and the apps on your machine:
 make up                       # kafka + postgres only
 
 # each in its own terminal:
-make api-gateway-dev          # :5000
+make api-gateway-dev          # :5050
 make event-monitor-service-dev# :4000
 make order-service-dev
 make payment-service-dev
@@ -170,7 +172,7 @@ make frontend-install         # first time only
 make frontend-dev             # http://localhost:3001
 ```
 
-> The frontend reads `NEXT_PUBLIC_GATEWAY_URL` (default `http://localhost:5000`) and
+> The frontend reads `NEXT_PUBLIC_GATEWAY_URL` (default `http://localhost:5050`) and
 > `NEXT_PUBLIC_MONITOR_URL` (default `http://localhost:4000`); the defaults work out of the box.
 
 ## Using it
@@ -186,28 +188,79 @@ Open **http://localhost:3001** and try, in order:
 
 Click any event to inspect its raw envelope; switch **stream / grouped** to see sagas as cards.
 
-## Deployment
+## Troubleshooting
 
-A live instance runs **end to end on a single [Hetzner](https://www.hetzner.com/) Cloud VPS**
-(Ubuntu, 4 GB) at **[eventtracer.cloudblick.com](https://eventtracer.cloudblick.com)**.
+**The UI loads but no events appear.** Run `make ps`. If the five domain services keep showing
+"Up X seconds" (restarting), check `make logs`. `ENOTFOUND postgres` or `ENOTFOUND kafka` means a
+container started without joining the Compose network, usually after a failed first start (see the
+next item). Recreate it with `docker compose --profile apps up -d --force-recreate postgres` (or
+`kafka`); the services recover on their own.
 
-The entire stack — all seven NestJS apps, the Next.js UI, Kafka (KRaft), and PostgreSQL — runs
-from the same `docker compose --profile apps up` on the box. A host-level
-**[Caddy](https://caddyserver.com)** reverse proxy terminates TLS (automatic Let's Encrypt
-certificates) and routes everything under one domain:
+**`Bind for 127.0.0.1:<port> failed: port is already allocated`.** Something on your machine
+already uses that port, often another project's Postgres (5432) or Kafka (9092). Either stop it,
+or move EventTracer's host port by creating a `.env` file next to `docker-compose.yml`:
+
+```bash
+POSTGRES_HOST_PORT=5433   # default 5432
+KAFKA_HOST_PORT=9094      # default 9092
+GATEWAY_PORT=5051         # default 5050
+MONITOR_PORT=4001         # default 4000
+FRONTEND_PORT=3002        # default 3001
+```
+
+Then run `make down && make up-all`. Only set the ones you need. The containers talk to each other
+on internal ports, so this only changes what's published on your machine. The UI build picks up
+`GATEWAY_PORT` / `MONITOR_PORT` automatically. For host dev (Option B), pass the same values to
+the apps: `POSTGRES_PORT=5433 KAFKA_BROKER=localhost:9094 make payment-service-dev`.
+
+> **Why 5050 and not 5000?** macOS's AirPlay Receiver listens on port 5000 by default, so the
+> gateway uses 5050 to avoid clashing with it on every Mac.
+
+**Everything stopped after a reboot.** All containers use `restart: unless-stopped`, so Docker
+brings them back when it starts. If you stopped them yourself, run `make up-all` again.
+
+## Deploying it yourself (optional)
+
+EventTracer is built to run locally, but the same Compose stack runs end to end on a single small
+VPS (4 GB RAM is enough; Kafka's heap is capped at 512 MB). Clone the repo on the server and run
+`docker compose --profile apps up -d`. Then put a reverse proxy such as
+**[Caddy](https://caddyserver.com)** in front of it to terminate TLS (automatic Let's Encrypt
+certificates) and route everything under one domain:
 
 | Path | Upstream |
 |---|---|
-| `/api/*` | API Gateway (`:5000`) — the `/api` prefix is stripped |
+| `/api/*` | API Gateway (`:5050`) — the `/api` prefix is stripped |
 | `/socket.io/*`, `/replay` | Event Monitor (`:4000`) — including the WebSocket upgrade → `wss://` |
 | `/*` | Frontend (`:3001`) |
 
+A matching Caddyfile block:
+
+```caddy
+eventtracer.example.com {
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:5050
+	}
+	@monitor path /socket.io/* /replay
+	handle @monitor {
+		reverse_proxy 127.0.0.1:4000
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3001
+	}
+}
+```
+
 Because the browser sees a **single origin**, there's no CORS to manage and the event stream runs
-over secure `wss://`. The frontend's `NEXT_PUBLIC_*` URLs are baked at image-build time (compose
-build args), so the deployed bundle points at the public origin. For defense in depth, the app and
-database ports are bound to `127.0.0.1` (only Caddy and the host can reach them) behind a cloud
-firewall that allows just `22/80/443` inbound. Additional projects follow the same shape — one
-subdomain, one Caddy block, one shared proxy.
+over secure `wss://`. The frontend's `NEXT_PUBLIC_*` URLs are baked in when the image is built
+(compose build args), so create a git-ignored `.env` on the server before the first build:
+
+```bash
+NEXT_PUBLIC_GATEWAY_URL=https://eventtracer.example.com/api
+NEXT_PUBLIC_MONITOR_URL=https://eventtracer.example.com
+```
+
+For defense in depth, every published port is bound to `127.0.0.1`, so only the proxy and the
+host can reach them. Pair that with a firewall that allows just `22/80/443` inbound.
 
 ### Redeploying after a change
 
@@ -224,19 +277,21 @@ make deploy          # git pull + rebuild changed images + recreate containers
 
 `make deploy` is safe to run repeatedly: Docker's layer cache skips unchanged steps, the Kafka and
 Postgres data volumes persist, and only containers whose image or config actually changed are
-recreated. The frontend's public URLs come from a server-only `.env` (git-ignored), so rebuilt
-bundles keep pointing at the live origin. A **routing** change is the exception — edit
-`/etc/caddy/Caddyfile` and `sudo systemctl reload caddy`, since Caddy runs outside Compose.
+recreated. The frontend's public URLs come from the server's `.env`, so rebuilt bundles keep
+pointing at your domain. A **routing** change is the exception — edit `/etc/caddy/Caddyfile` and
+`sudo systemctl reload caddy`, since Caddy runs outside Compose.
 
 ## Ports
 
 | Port | Service |
 |---|---|
 | 3001 | Frontend (Next.js) |
-| 5000 | API Gateway (REST) |
+| 5050 | API Gateway (REST) |
 | 4000 | Event Monitor (WebSocket + `/replay`) |
 | 9092 | Kafka (host listener) |
 | 5432 | PostgreSQL |
+
+All are bound to `127.0.0.1` and can be moved with a `.env` file (see [Troubleshooting](#troubleshooting)).
 
 ## Make targets
 
