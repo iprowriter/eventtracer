@@ -10,6 +10,13 @@ visualization* of how independent services choreograph through an event log.
 > 🔗 **Live demo:** **[eventtracer.cloudblick.com](https://eventtracer.cloudblick.com)** — hosted end to end on a Hetzner VPS.
 
 ---
+
+## Video Walkthrough of the App
+https://github.com/user-attachments/assets/a8a5b97e-a2f5-4710-b01b-7cbdb047a012
+
+
+---
+## The App UI
 ![EventTracer HomePage](./assets/eventtracer-homepage.png)
 
 ## Why it exists
